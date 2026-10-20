@@ -1,0 +1,9 @@
+node_modules
+dist
+dev-dist
+.DS_Store
+*.local
+# Exportierte Trainingsdaten nie committen
+molog-export*.json
+.claude/settings.local.json
+*.tsbuildinfo

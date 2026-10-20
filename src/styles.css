@@ -1,0 +1,427 @@
+:root {
+  --bg: #0e0f11;
+  --surface: #1a1c20;
+  --surface-2: #26292f;
+  --text: #f2f3f5;
+  --muted: #8b9099;
+  --tick: #4a4e56;
+  --accent: #c6f432;
+  --accent-ink: #c6f432;
+  --accent-text: #0e0f11;
+  --radius: 16px;
+  color-scheme: dark;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+}
+
+/* data-theme wird in settings.ts gesetzt (System/Hell/Dunkel) */
+:root[data-theme='light'] {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #e6e8ec;
+  --text: #121316;
+  --muted: #6b707a;
+  --tick: #b9bdc5;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+ul {
+  list-style: none;
+}
+
+.screen {
+  min-height: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.center {
+  text-align: center;
+}
+
+/* ---------- Kopfzeile ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.topbar-title {
+  color: var(--muted);
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-title {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin: 8px 0;
+}
+
+.exercise-title {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  line-height: 1.15;
+}
+
+/* ---------- Buttons ---------- */
+
+.button {
+  width: 100%;
+  min-height: 56px;
+  border-radius: var(--radius);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.button:active {
+  transform: scale(0.98);
+}
+
+.button-primary {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.button-secondary {
+  background: var(--surface-2);
+}
+
+.button-huge {
+  min-height: 80px;
+  font-size: 22px;
+}
+
+.link-button {
+  color: var(--accent-ink);
+  font-size: 16px;
+  padding: 8px 0;
+}
+
+.chip {
+  align-self: flex-start;
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 16px;
+}
+
+.segmented {
+  display: flex;
+  gap: 6px;
+  background: var(--surface);
+  padding: 4px;
+  border-radius: 14px;
+}
+
+.segmented button {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.segmented button.active {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* ---------- Eingabe & Vorschläge ---------- */
+
+.field-label {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-top: 8px;
+}
+
+.autocomplete {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.text-input {
+  width: 100%;
+  background: var(--surface);
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text);
+  font: inherit;
+  font-size: 22px; /* ≥16px, sonst zoomt iOS beim Fokussieren */
+  font-weight: 600;
+  padding: 16px;
+  outline: none;
+}
+
+.text-input:focus {
+  border-color: var(--accent);
+}
+
+.text-input-small {
+  font-size: 17px;
+  padding: 12px 14px;
+}
+
+.suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.suggestion {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 18px;
+  min-height: 52px;
+}
+
+.suggestion:active {
+  background: var(--surface-2);
+}
+
+.suggestion-hint {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.suggestion-create {
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+/* ---------- Übungs-Screen ---------- */
+
+.set-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 36px;
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.sliders {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 48px;
+}
+
+/* ---------- Lineal-Slider ---------- */
+
+.ruler {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.ruler-value {
+  font-size: 88px;
+  font-weight: 800;
+  letter-spacing: -2px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  line-height: 1;
+}
+
+.ruler-unit {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--muted);
+  margin-left: 8px;
+}
+
+.ruler-track {
+  position: relative;
+  height: 72px;
+  margin-top: 12px;
+  touch-action: none;
+  overflow: hidden;
+  /* Striche zu den Rändern hin ausblenden */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
+}
+
+.ruler-tick,
+.ruler-marker {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+}
+
+.ruler-tick {
+  height: 22px;
+  margin-top: -11px;
+  background: var(--tick);
+}
+
+.ruler-tick.major {
+  height: 30px;
+  margin-top: -15px;
+  background: var(--muted);
+}
+
+.ruler-marker {
+  width: 5px;
+  margin-left: -2.5px;
+  height: 44px;
+  margin-top: -22px;
+  background: var(--text);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.undo {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+/* ---------- Listen ---------- */
+
+.recent {
+  margin-top: 16px;
+}
+
+.recent ul,
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.recent-item,
+.summary li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 16px;
+}
+
+.recent-item .muted,
+.summary .muted {
+  font-size: 14px;
+}
+
+/* ---------- Startscreen & Einstellungen ---------- */
+
+.home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.icon-button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.swatch {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  outline: 3px solid transparent;
+  outline-offset: 3px;
+}
+
+.swatch.active {
+  outline-color: var(--text);
+}
+
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.settings-row {
+  text-align: left;
+  padding: 16px;
+  font-size: 17px;
+  color: var(--accent-ink);
+}
+
+.settings-row + .settings-row {
+  border-top: 1px solid var(--surface-2);
+}
