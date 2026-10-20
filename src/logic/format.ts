@@ -9,10 +9,10 @@ export function describeSet(s: WorkoutSet) {
   return s.weightKg !== null ? `${fmtNum(s.weightKg)} kg × ${amount}` : amount
 }
 
-/** Kurzform für Satz-Chips: "80 × 8", "12", "45 s" */
+/** Für Satz-Chips: "80 kg × 8", "12 Wdh", "45 s" – Einheiten immer dabei, damit nichts verwechselt wird. */
 export function shortSet(s: WorkoutSet) {
-  const amount = s.reps !== null ? `${s.reps}` : `${s.durationSec} s`
-  return s.weightKg !== null ? `${fmtNum(s.weightKg)} × ${amount}` : amount
+  if (s.weightKg !== null) return `${fmtNum(s.weightKg)} kg × ${s.reps ?? `${s.durationSec} s`}`
+  return s.reps !== null ? `${s.reps} Wdh` : `${s.durationSec} s`
 }
 
 export function fmtDuration(ms: number) {

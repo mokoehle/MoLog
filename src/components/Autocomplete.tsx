@@ -11,13 +11,14 @@ interface Props<T extends Named> {
   hint?: (item: T) => string | undefined
   onSelect: (item: T) => void
   onCreate: (name: string) => void
+  autoFocus?: boolean
 }
 
 const MAX_RESULTS = 6
 
 /** Textfeld mit Vorschlägen. Gibt es den Namen noch nicht, kann er direkt angelegt werden. */
 export function Autocomplete<T extends Named>(props: Props<T>) {
-  const { label, placeholder, items, initialSuggestions, rank, hint, onSelect, onCreate } = props
+  const { label, placeholder, items, initialSuggestions, rank, hint, onSelect, onCreate, autoFocus = true } = props
   const [query, setQuery] = useState('')
 
   const trimmed = query.trim()
@@ -45,7 +46,7 @@ export function Autocomplete<T extends Named>(props: Props<T>) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={placeholder}
-          autoFocus
+          autoFocus={autoFocus}
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="words"

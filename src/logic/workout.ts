@@ -156,3 +156,51 @@ export async function deleteWorkout(workoutId: Id) {
     await db.workouts.delete(workoutId)
   })
 }
+
+/** Ändert Name/Einstellungen einer Übung. Bereits gespeicherte Sätze bleiben unverändert. */
+export async function updateExercise(
+  id: Id,
+  patch: { name: string; usesWeight: boolean; measure: Measure; parentId?: Id },
+) {
+  await db.exercises.update(id, { ...patch, name: patch.name.trim(), parentId: patch.parentId })
+}
+
+/**
+ * Tauscht die Übung eines laufenden Eintrags aus (z. B. falsch ausgewählt).
+ * Schon gespeicherte Sätze wandern mit und werden an Gewicht/Wdh/Sekunden der neuen Übung angepasst.
+ */
+export async function changeEntryExercise(entryId: Id, exercise: Exercise) {
+  await db.transaction('rw', db.entries, db.sets, async () => {
+    await db.entries.update(entryId, { exerciseId: exercise.id })
+    const sets = await db.sets.where('entryId').equals(entryId).toArray()
+    for (const s of sets) {
+      const amount = s.reps ?? s.durationSec
+      await db.sets.update(s.id, {
+        exerciseId: exercise.id,
+        weightKg: exercise.usesWeight ? (s.weightKg ?? 0) : null,
+        reps: exercise.measure === 'reps' ? amount : null,
+        durationSec: exercise.measure === 'seconds' ? amount : null,
+      })
+    }
+  })
+}
+
+/** Öffnet die zuletzt abgeschlossene Übung des Trainings wieder (z. B. zu früh auf "Nächste Übung" getippt). */
+export async function reopenLastEntry(workoutId: Id) {
+  const last = (await db.entries.where('workoutId').equals(workoutId).sortBy('position')).at(-1)
+  if (last) await db.entries.update(last.id, { endedAt: undefined })
+}
+
+/** Letzte Einheiten einer Übung vor dem aktuellen Training, neueste zuerst. */
+export async function previousSessions(exerciseId: Id, currentWorkoutId: Id, limit: number) {
+  const entries = (await db.entries.where('exerciseId').equals(exerciseId).sortBy('startedAt'))
+    .reverse()
+    .filter((e) => e.workoutId !== currentWorkoutId)
+  const result: { entry: ExerciseEntry; sets: WorkoutSet[] }[] = []
+  for (const entry of entries) {
+    const sets = await db.sets.where('entryId').equals(entry.id).sortBy('position')
+    if (sets.length) result.push({ entry, sets })
+    if (result.length >= limit) break
+  }
+  return result
+}

@@ -1,31 +1,44 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { Autocomplete } from '../components/Autocomplete'
+import { Sheet } from '../components/Sheet'
 import { db } from '../db/db'
 import type { Exercise, Workout } from '../db/schema'
-import { finishWorkout, recencyRank, startExercise, suggestedExerciseIds } from '../logic/workout'
-import { NewExercise } from './NewExercise'
+import {
+  createExercise,
+  deleteWorkout,
+  finishWorkout,
+  recencyRank,
+  reopenLastEntry,
+  startExercise,
+  suggestedExerciseIds,
+} from '../logic/workout'
+import { ExerciseForm } from './ExerciseForm'
+import { WorkoutMenuRows, type WorkoutNav } from './ExerciseScreen'
 
-interface Props {
+interface Props extends WorkoutNav {
   workout: Workout
-  onFinished: (saved: boolean) => void
 }
 
-export function ExercisePicker({ workout, onFinished }: Props) {
+export function ExercisePicker({ workout, onFinished, onOpenHistory }: Props) {
   const [newName, setNewName] = useState<string | null>(null)
+  const [menu, setMenu] = useState(false)
 
   const data = useLiveQuery(async () => {
-    const [exercises, entries, type, location, suggestedIds] = await Promise.all([
+    const [exercises, entries, type, location, suggestedIds, setCount] = await Promise.all([
       db.exercises.toArray(),
       db.entries.toArray(),
       db.workoutTypes.get(workout.workoutTypeId),
       db.locations.get(workout.locationId),
       suggestedExerciseIds(workout.workoutTypeId, workout.id),
+      db.sets.where('workoutId').equals(workout.id).count(),
     ])
     const lastUsed = new Map<string, number>()
     for (const e of entries) lastUsed.set(e.exerciseId, Math.max(lastUsed.get(e.exerciseId) ?? 0, e.startedAt))
-    const doneHere = entries.filter((e) => e.workoutId === workout.id).length
-    return { exercises, lastUsed, type, location, suggestedIds, doneHere }
+    const here = entries.filter((e) => e.workoutId === workout.id).sort((a, b) => a.position - b.position)
+    const lastHere = here.at(-1)
+    const lastName = lastHere && exercises.find((e) => e.id === lastHere.exerciseId)?.name
+    return { exercises, lastUsed, type, location, suggestedIds, doneHere: here.length, lastName, setCount }
   }, [workout.id])
   if (!data) return null
 
@@ -41,19 +54,27 @@ export function ExercisePicker({ workout, onFinished }: Props) {
   const choose = (exercise: Exercise) => startExercise(workout.id, exercise.id)
 
   const finish = async () => {
-    const saved = await finishWorkout(workout.id)
-    onFinished(saved)
+    setMenu(false)
+    onFinished(await finishWorkout(workout.id))
+  }
+
+  const discard = async () => {
+    if (data.setCount > 0 && !confirm(`Training mit ${data.setCount} Sätzen wirklich verwerfen?`)) return
+    setMenu(false)
+    await deleteWorkout(workout.id)
+    onFinished(false)
   }
 
   if (newName !== null) {
     return (
-      <NewExercise
-        name={newName}
+      <ExerciseForm
+        initialName={newName}
         exercises={data.exercises}
+        submitLabel="Anlegen & starten"
         onCancel={() => setNewName(null)}
-        onCreated={(ex) => {
+        onSubmit={async (input) => {
           setNewName(null)
-          void choose(ex)
+          await choose(await createExercise(input))
         }}
       />
     )
@@ -61,11 +82,25 @@ export function ExercisePicker({ workout, onFinished }: Props) {
 
   return (
     <div className="screen">
-      <header className="topbar">
-        <span className="topbar-title">
-          {data.type?.name} · {data.location?.name}
-        </span>
+      <header className="topbar topbar-split">
+        {data.doneHere > 0 ? (
+          <button className="link-button" onClick={() => reopenLastEntry(workout.id)}>
+            ‹ {data.lastName ?? 'Letzte Übung'}
+          </button>
+        ) : (
+          <button className="link-button" onClick={discard}>
+            ‹ Abbrechen
+          </button>
+        )}
+        <button className="icon-button" onClick={() => setMenu(true)} aria-label="Menü">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
       </header>
+      <p className="topbar-title">
+        {data.type?.name} · {data.location?.name}
+      </p>
 
       <Autocomplete
         label={data.doneHere === 0 ? 'Erste Übung' : `Übung ${data.doneHere + 1}`}
@@ -82,6 +117,12 @@ export function ExercisePicker({ workout, onFinished }: Props) {
       <button className="button button-secondary" onClick={finish}>
         Training beenden
       </button>
+
+      {menu && (
+        <Sheet title="Menü" onClose={() => setMenu(false)}>
+          <WorkoutMenuRows onHistory={onOpenHistory} onEnd={finish} onCancel={discard} />
+        </Sheet>
+      )}
     </div>
   )
 }
