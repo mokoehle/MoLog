@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Autocomplete } from '../components/Autocomplete'
+import { HapticButton } from '../components/HapticButton'
 import { RulerSlider } from '../components/RulerSlider'
 import { Sheet } from '../components/Sheet'
 import { db } from '../db/db'
@@ -40,6 +41,14 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
   const [values, setValues] = useState<SetValues | null>(null)
   const [sheet, setSheet] = useState<'menu' | 'change' | null>(null)
   const [form, setForm] = useState<Form | null>(null)
+  // Kurzes "✓ Gespeichert" als Bestätigung nach dem Speichern
+  const [savedAt, setSavedAt] = useState(0)
+  const justSaved = savedAt > 0
+  useEffect(() => {
+    if (!savedAt) return
+    const t = setTimeout(() => setSavedAt(0), 900)
+    return () => clearTimeout(t)
+  }, [savedAt])
 
   const data = useLiveQuery(async () => {
     const [exercise, sets, exercises, previous] = await Promise.all([
@@ -125,16 +134,17 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
         <p className="last-time">
           <span className="muted">Letztes Mal ({fmtRelative(lastTime.entry.startedAt)}):</span>{' '}
           {lastTime.sets.map((s, i) => (
-            <span key={s.id} className="nowrap">
+            // Trennzeichen außerhalb von .nowrap, sonst kann die Zeile nirgends umbrechen
+            <Fragment key={s.id}>
               {i > 0 && ' · '}
-              {shortSet(s)}
-            </span>
+              <span className="nowrap">{shortSet(s)}</span>
+            </Fragment>
           ))}
         </p>
       )}
 
       <div className="set-info">
-        <span>
+        <span key={sets.length} className={sets.length ? 'pulse-once' : undefined}>
           Satz {sets.length + 1}
           {last && <> · zuletzt {describeSet(last)}</>}
         </span>
@@ -182,15 +192,16 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
       </div>
 
       <div className="actions">
-        <button
-          className="button button-primary"
-          onClick={() => {
+        <HapticButton
+          className={justSaved ? 'button button-primary saved' : 'button button-primary'}
+          onPress={() => {
             haptic()
             void logSet(entry, exercise, values)
+            setSavedAt(Date.now())
           }}
         >
-          Satz speichern
-        </button>
+          {justSaved ? '✓ Gespeichert' : 'Satz speichern'}
+        </HapticButton>
         <button className="button button-secondary" onClick={() => finishExercise(entry.id)}>
           Nächste Übung
         </button>
