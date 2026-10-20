@@ -23,12 +23,10 @@ export const ACCENTS: Accent[] = [
 export interface Settings {
   theme: Theme
   accent: string
-  /** Leichtes Vibrieren beim Bedienen der Slider. */
-  haptics: boolean
 }
 
 const KEY = 'molog-settings'
-const DEFAULTS: Settings = { theme: 'system', accent: 'lime', haptics: true }
+const DEFAULTS: Settings = { theme: 'system', accent: 'lime' }
 
 // Einstellungen sind reine Darstellungs-Vorlieben pro Gerät, daher localStorage statt Datenbank.
 function load(): Settings {
@@ -41,8 +39,6 @@ function load(): Settings {
 
 let current = load()
 const listeners = new Set<() => void>()
-
-export const getSettings = () => current
 
 export function updateSettings(patch: Partial<Settings>) {
   current = { ...current, ...patch }

@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
 import { downloadExport, importAll } from '../logic/backup'
-import { hapticWith, isIOS } from '../haptics'
 import { ACCENTS, updateSettings, useSettings, type Theme } from '../settings'
 
 interface Props {
@@ -63,16 +62,6 @@ export function Settings({ onClose }: Props) {
         ))}
       </div>
 
-      <label className="field-label">Vibration beim Slider</label>
-      <div className="segmented">
-        <button className={settings.haptics ? 'active' : ''} onClick={() => updateSettings({ haptics: true })}>
-          An
-        </button>
-        <button className={!settings.haptics ? 'active' : ''} onClick={() => updateSettings({ haptics: false })}>
-          Aus
-        </button>
-      </div>
-
       <label className="field-label">Daten</label>
       <div className="settings-list">
         <button className="settings-row" onClick={downloadExport}>
@@ -94,29 +83,6 @@ export function Settings({ onClose }: Props) {
         />
       </div>
       {message && <p className="muted">{message}</p>}
-
-      {/* Vorübergehend: herausfinden, welche Haptik-Variante auf dem iPhone funktioniert */}
-      <label className="field-label">Vibration testen</label>
-      <div className="settings-list">
-        <button className="settings-row" onClick={() => hapticWith('switch-hidden')}>
-          A · Switch (versteckt)
-        </button>
-        <button className="settings-row" onClick={() => hapticWith('switch-offscreen')}>
-          B · Switch (außerhalb des Bildschirms)
-        </button>
-        <button className="settings-row" onClick={() => hapticWith('vibrate')}>
-          C · navigator.vibrate
-        </button>
-        <label className="settings-row haptic-switch-row">
-          D · Echter Schalter zum Antippen
-          <input type="checkbox" {...{ switch: '' }} />
-        </label>
-      </div>
-      <p className="muted diag">
-        iOS erkannt: {isIOS ? 'ja' : 'nein'} · vibrate: {typeof navigator.vibrate}
-        <br />
-        {navigator.userAgent}
-      </p>
     </div>
   )
 }

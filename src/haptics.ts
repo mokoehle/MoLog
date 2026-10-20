@@ -1,56 +1,21 @@
-import { getSettings } from './settings'
-
 /**
- * Leichtes haptisches Feedback.
+ * Haptisches Feedback (Slider-Striche, Satz speichern).
  *
- * iOS-Safari vibriert nicht über navigator.vibrate. Seit iOS 18 gibt aber das Umschalten
- * eines <input type="checkbox" switch> einen Haptik-Tick – das lösen wir unsichtbar aus.
- * Inoffizieller Trick, kann mit künftigen iOS-Versionen wegfallen. Sonst: vibrate().
+ * In der Web-App auf dem iPhone derzeit wirkungslos: iOS-Safari kennt navigator.vibrate nicht,
+ * und der frühere Trick über <input type="checkbox" switch> reagiert nur noch auf echte
+ * Berührungen (getestet auf iOS, Okt. 2026). Auf Android vibriert es.
+ *
+ * Bei einem Wechsel zu Capacitor hier @capacitor/haptics einbauen (ImpactStyle.Light),
+ * dann vibrieren alle Aufrufstellen automatisch.
  */
 
 const MIN_INTERVAL_MS = 25
-
-export const isIOS =
-  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-
 let lastTick = 0
 
-export type HapticMethod = 'switch-hidden' | 'switch-offscreen' | 'vibrate'
-
-/** Klickt ein unsichtbares Switch-Label an, das iOS mit einem Haptik-Tick quittiert. */
-function switchTick(mode: 'hidden' | 'offscreen') {
-  const label = document.createElement('label')
-  label.setAttribute('aria-hidden', 'true')
-  if (mode === 'hidden') {
-    label.style.display = 'none'
-  } else {
-    Object.assign(label.style, { position: 'fixed', left: '-100px', top: '0', opacity: '0', pointerEvents: 'none' })
-  }
-  const input = document.createElement('input')
-  input.type = 'checkbox'
-  input.setAttribute('switch', '')
-  input.tabIndex = -1
-  label.appendChild(input)
-  document.body.appendChild(label)
-  label.click()
-  label.remove()
-}
-
-export function hapticWith(method: HapticMethod) {
-  try {
-    if (method === 'vibrate') navigator.vibrate?.(8)
-    else switchTick(method === 'switch-hidden' ? 'hidden' : 'offscreen')
-  } catch {
-    // Feedback ist optional
-  }
-}
-
 export function haptic() {
-  if (!getSettings().haptics) return
+  if (typeof navigator.vibrate !== 'function') return
   const now = performance.now()
   if (now - lastTick < MIN_INTERVAL_MS) return
   lastTick = now
-  // Auf iOS nie vibrate() verwenden – es kann existieren, ohne etwas zu tun.
-  hapticWith(isIOS ? 'switch-hidden' : typeof navigator.vibrate === 'function' ? 'vibrate' : 'switch-hidden')
+  navigator.vibrate(8)
 }
