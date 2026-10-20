@@ -1,5 +1,6 @@
 import { db } from '../db/db'
 import { SCHEMA_VERSION, type ExportFile } from '../db/schema'
+import { localDate, toCsv } from './csv'
 
 export async function exportAll(): Promise<ExportFile> {
   return {
@@ -17,13 +18,8 @@ export async function exportAll(): Promise<ExportFile> {
   }
 }
 
-/** Speichert den Export als Datei, auf dem iPhone über das Teilen-Menü (z. B. „In Dateien sichern“). */
-export async function downloadExport() {
-  const data = await exportAll()
-  const date = new Date().toISOString().slice(0, 10)
-  const file = new File([JSON.stringify(data, null, 2)], `molog-export-${date}.json`, {
-    type: 'application/json',
-  })
+/** Gibt eine Datei weiter: auf dem iPhone über das Teilen-Menü (z. B. „In Dateien sichern“), sonst als Download. */
+export async function shareFile(file: File) {
   if (navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file] })
@@ -38,6 +34,19 @@ export async function downloadExport() {
   a.download = file.name
   a.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+const today = () => localDate(Date.now())
+
+export async function downloadExport() {
+  const data = await exportAll()
+  await shareFile(new File([JSON.stringify(data, null, 2)], `molog-export-${today()}.json`, { type: 'application/json' }))
+}
+
+export async function downloadCsv() {
+  const csv = toCsv(await exportAll())
+  // BOM, damit Excel die Umlaute korrekt erkennt
+  await shareFile(new File(['\uFEFF' + csv], `molog-saetze-${today()}.csv`, { type: 'text/csv' }))
 }
 
 /** Ersetzt alle vorhandenen Daten durch den Inhalt der Datei. */

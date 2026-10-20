@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { downloadExport, importAll } from '../logic/backup'
+import { downloadCsv, downloadExport, importAll } from '../logic/backup'
 import { ACCENTS, updateSettings, useSettings, type Theme } from '../settings'
 
 interface Props {
@@ -64,11 +64,14 @@ export function Settings({ onClose }: Props) {
 
       <label className="field-label">Daten</label>
       <div className="settings-list">
+        <button className="settings-row" onClick={downloadCsv}>
+          Als CSV exportieren (z. B. für KI-Analyse)
+        </button>
         <button className="settings-row" onClick={downloadExport}>
-          Daten exportieren
+          Backup exportieren (JSON)
         </button>
         <button className="settings-row" onClick={() => fileRef.current?.click()}>
-          Daten importieren
+          Backup importieren
         </button>
         <input
           ref={fileRef}

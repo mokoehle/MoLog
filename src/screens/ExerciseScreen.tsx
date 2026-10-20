@@ -3,19 +3,13 @@ import { useEffect, useState } from 'react'
 import { RulerSlider } from '../components/RulerSlider'
 import { db } from '../db/db'
 import { haptic } from '../haptics'
-import type { ExerciseEntry, Workout, WorkoutSet } from '../db/schema'
+import type { ExerciseEntry, Workout } from '../db/schema'
+import { describeSet } from '../logic/format'
 import { finishExercise, getStartValues, logSet, undoLastSet, WEIGHT_STEP, type SetValues } from '../logic/workout'
 
 interface Props {
   workout: Workout
   entry: ExerciseEntry
-}
-
-const fmt = (v: number) => v.toLocaleString('de-DE', { maximumFractionDigits: 2 })
-
-export function describeSet(s: WorkoutSet) {
-  const amount = s.reps !== null ? `${s.reps}` : `${s.durationSec} s`
-  return s.weightKg !== null ? `${fmt(s.weightKg)} kg × ${amount}` : amount
 }
 
 export function ExerciseScreen({ workout, entry }: Props) {

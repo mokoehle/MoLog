@@ -10,7 +10,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt': Update erst übernehmen, wenn kein Training läuft (siehe src/pwa.ts)
+      registerType: 'prompt',
       includeAssets: ['apple-touch-icon.png', 'icon.svg'],
       manifest: {
         name: 'MoLog',

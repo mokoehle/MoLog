@@ -1,27 +1,33 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db/db'
-import { plural } from '../logic/format'
+import { useEffect } from 'react'
+import { Stat } from '../components/WorkoutDetail'
+import type { Id } from '../db/schema'
+import { fmtDuration, fmtRelative, plural } from '../logic/format'
+import { loadAll, workoutTotals } from '../logic/stats'
+import { applyUpdateIfIdle } from '../pwa'
 
 interface Props {
   onStart: () => void
   onSettings: () => void
+  onHistory: () => void
+  onOpenWorkout: (id: Id) => void
 }
 
-const dateFmt = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })
+const RECENT = 3
 
-export function Home({ onStart, onSettings }: Props) {
-  const recent = useLiveQuery(async () => {
-    const workouts = (await db.workouts.orderBy('startedAt').reverse().limit(10).toArray()).filter((w) => w.endedAt)
-    return Promise.all(
-      workouts.map(async (w) => ({
-        workout: w,
-        type: await db.workoutTypes.get(w.workoutTypeId),
-        location: await db.locations.get(w.locationId),
-        exercises: await db.entries.where('workoutId').equals(w.id).count(),
-        sets: await db.sets.where('workoutId').equals(w.id).count(),
-      })),
-    )
-  })
+const WEEK = 7 * 86400000
+
+export function Home({ onStart, onSettings, onHistory, onOpenWorkout }: Props) {
+  // Startscreen = kein Training läuft → guter Moment für ein wartendes Update
+  useEffect(() => {
+    void applyUpdateIfIdle()
+  }, [])
+
+  const data = useLiveQuery(loadAll)
+  if (!data) return null
+
+  const week = data.workouts.filter((w) => w.startedAt >= Date.now() - WEEK)
+  const weekSets = week.reduce((n, w) => n + workoutTotals(data, w.id).sets, 0)
 
   return (
     <div className="screen">
@@ -39,22 +45,43 @@ export function Home({ onStart, onSettings }: Props) {
         Training starten
       </button>
 
-      <section className="recent">
+      {data.workouts.length > 0 && (
+        <>
+          <h2 className="field-label">Letzte 7 Tage</h2>
+          <div className="stat-tiles">
+            <Stat label="Trainings" value={String(week.length)} />
+            <Stat label="Sätze" value={String(weekSets)} />
+          </div>
+        </>
+      )}
+
+      <section>
         <h2 className="field-label">Letzte Trainings</h2>
-        {recent?.length === 0 && <p className="muted">Noch keine Trainings.</p>}
-        <ul>
-          {recent?.map(({ workout, type, location, exercises, sets }) => (
-            <li key={workout.id} className="recent-item">
-              <span>
-                <strong>{type?.name}</strong> · {location?.name}
-              </span>
-              <span className="muted">
-                {dateFmt.format(workout.startedAt)} · {plural(exercises, 'Übung', 'Übungen')} · {plural(sets, 'Satz', 'Sätze')} ·{' '}
-                {Math.round((workout.endedAt! - workout.startedAt) / 60000)} min
-              </span>
-            </li>
-          ))}
+        {data.workouts.length === 0 && <p className="muted">Noch keine Trainings.</p>}
+        <ul className="card-list">
+          {data.workouts.slice(0, RECENT).map((w) => {
+            const totals = workoutTotals(data, w.id)
+            return (
+              <li key={w.id}>
+                <button className="list-card" onClick={() => onOpenWorkout(w.id)}>
+                  <span className="list-card-top">
+                    <strong>{data.types.get(w.workoutTypeId)?.name}</strong>
+                    <span className="muted">{fmtRelative(w.startedAt)}</span>
+                  </span>
+                  <span className="muted small">
+                    {data.locations.get(w.locationId)?.name} · {plural(totals.exercises, 'Übung', 'Übungen')} ·{' '}
+                    {plural(totals.sets, 'Satz', 'Sätze')} · {fmtDuration(w.endedAt! - w.startedAt)}
+                  </span>
+                </button>
+              </li>
+            )
+          })}
         </ul>
+        {data.workouts.length > 0 && (
+          <button className="button button-secondary history-button" onClick={onHistory}>
+            Verlauf & Übungen ansehen
+          </button>
+        )}
       </section>
     </div>
   )

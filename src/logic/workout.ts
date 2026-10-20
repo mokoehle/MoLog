@@ -147,3 +147,12 @@ export async function suggestedExerciseIds(workoutTypeId: Id, currentWorkoutId: 
 export function recencyRank(lastUsed: Map<Id, number>) {
   return (item: { id: Id }) => -(lastUsed.get(item.id) ?? 0)
 }
+
+/** Löscht ein Training samt Übungen und Sätzen. */
+export async function deleteWorkout(workoutId: Id) {
+  await db.transaction('rw', db.workouts, db.entries, db.sets, async () => {
+    await db.sets.where('workoutId').equals(workoutId).delete()
+    await db.entries.where('workoutId').equals(workoutId).delete()
+    await db.workouts.delete(workoutId)
+  })
+}
