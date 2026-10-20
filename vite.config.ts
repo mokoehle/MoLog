@@ -7,6 +7,8 @@ const base = process.env.BASE_PATH ?? '/MoLog/'
 
 export default defineConfig({
   base,
+  // Build-Zeitpunkt, in den Einstellungen sichtbar – so lässt sich prüfen, ob ein Update angekommen ist
+  define: { __BUILD_TIME__: JSON.stringify(new Date().toISOString()) },
   plugins: [
     react(),
     VitePWA({

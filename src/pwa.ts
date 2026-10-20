@@ -4,8 +4,12 @@ import { db } from './db/db'
 /**
  * Updates der App: Eine neue Version wird im Hintergrund geladen, aber erst übernommen
  * (Seite neu laden), wenn gerade kein Training läuft – nie mitten in einer Übung.
+ * Ausnahme: direkt nach dem Öffnen der App. Dann ist noch nichts eingestellt, was verloren
+ * gehen könnte, und das Update kommt auch an, wenn ein Training offen geblieben ist.
  */
 
+const LAUNCH_GRACE_MS = 8000
+const loadedAt = Date.now()
 let updatePending = false
 
 const updateSW = registerSW({
@@ -24,11 +28,12 @@ const updateSW = registerSW({
   },
 })
 
-/** Übernimmt ein wartendes Update, sofern kein Training läuft. */
+/** Übernimmt ein wartendes Update, sofern kein Training läuft (oder die App gerade erst geöffnet wurde). */
 export async function applyUpdateIfIdle() {
   if (!updatePending) return
+  const justLaunched = Date.now() - loadedAt < LAUNCH_GRACE_MS
   const running = await db.workouts.filter((w) => !w.endedAt).count()
-  if (running > 0) return
+  if (running > 0 && !justLaunched) return
   updatePending = false
   await updateSW(true)
 }

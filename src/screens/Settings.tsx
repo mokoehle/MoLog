@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { ViewportInfo } from '../components/ViewportInfo'
 import { downloadCsv, downloadExport, importAll } from '../logic/backup'
 import { ACCENTS, updateSettings, useSettings, type Theme } from '../settings'
 
@@ -86,6 +87,9 @@ export function Settings({ onClose }: Props) {
         />
       </div>
       {message && <p className="muted">{message}</p>}
+
+      <div className="spacer" />
+      <ViewportInfo />
     </div>
   )
 }
