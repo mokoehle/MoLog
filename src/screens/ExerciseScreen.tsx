@@ -19,7 +19,6 @@ import {
   previousSessions,
   undoLastSet,
   updateExercise,
-  WEIGHT_STEP,
   type SetValues,
 } from '../logic/workout'
 import { ExerciseForm } from './ExerciseForm'
@@ -104,7 +103,6 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
       <ExerciseForm
         exercise={form.mode === 'edit' ? exercise : undefined}
         initialName={form.mode === 'edit' ? exercise.name : form.name}
-        exercises={exercises}
         submitLabel={form.mode === 'edit' ? 'Speichern' : 'Anlegen & wechseln'}
         onCancel={() => setForm(null)}
         onSubmit={async (input) => {
@@ -161,10 +159,11 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
           <RulerSlider
             value={values.weightKg}
             onChange={(weightKg) => setValues((v) => v && { ...v, weightKg })}
-            step={WEIGHT_STEP}
+            step={exercise.weightStep}
             min={0}
             max={400}
-            majorEvery={4}
+            // längerer Strich alle 10 kg
+            majorEvery={Math.max(1, Math.round(10 / exercise.weightStep))}
             unit="kg"
           />
         )}
@@ -216,7 +215,7 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
               setForm({ mode: 'edit' })
             }}
           >
-            „{exercise.name}“ bearbeiten (Name, Gewicht, Variante)
+            „{exercise.name}“ bearbeiten (Name, Gruppe, Gerät, Schritte)
           </button>
           {sets.length > 0 && (
             <p className="muted small">Die {sets.length} gespeicherten Sätze werden in die neue Übung übernommen.</p>

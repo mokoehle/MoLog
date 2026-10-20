@@ -15,13 +15,15 @@ export function normalize(s: string): string {
 }
 
 /**
- * Sortiert passende Einträge: Anfang des Namens > Anfang eines Wortes > irgendwo enthalten.
+ * Sortiert passende Einträge: Anfang des Namens > Anfang eines Wortes > irgendwo enthalten > Zusatztext.
  * Bei Gleichstand gewinnt der zuletzt/häufiger genutzte Eintrag (`rank`, kleiner = besser).
  */
 export function matchSuggestions<T extends Named>(
   items: T[],
   query: string,
   rank: (item: T) => number = () => 0,
+  /** Weiterer Text, der gefunden werden darf (z. B. Gruppenname) – zählt schwächer als der Name. */
+  extraText?: (item: T) => string | undefined,
 ): T[] {
   const q = normalize(query)
   if (!q) return []
@@ -32,6 +34,7 @@ export function matchSuggestions<T extends Named>(
     if (n.startsWith(q)) score = 0
     else if (n.split(/[\s-]/).some((w) => w.startsWith(q))) score = 1
     else if (n.includes(q)) score = 2
+    else if (extraText && normalize(extraText(item) ?? '').split(/[\s-]/).some((w) => w.startsWith(q))) score = 3
     else continue
     scored.push({ item, score })
   }

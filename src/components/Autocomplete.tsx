@@ -9,6 +9,8 @@ interface Props<T extends Named> {
   initialSuggestions: T[]
   rank?: (item: T) => number
   hint?: (item: T) => string | undefined
+  /** Zusätzlicher Suchtext, z. B. der Gruppenname einer Übung */
+  extraText?: (item: T) => string | undefined
   onSelect: (item: T) => void
   onCreate: (name: string) => void
   autoFocus?: boolean
@@ -18,11 +20,11 @@ const MAX_RESULTS = 6
 
 /** Textfeld mit Vorschlägen. Gibt es den Namen noch nicht, kann er direkt angelegt werden. */
 export function Autocomplete<T extends Named>(props: Props<T>) {
-  const { label, placeholder, items, initialSuggestions, rank, hint, onSelect, onCreate, autoFocus = true } = props
+  const { label, placeholder, items, initialSuggestions, rank, hint, extraText, onSelect, onCreate, autoFocus = true } = props
   const [query, setQuery] = useState('')
 
   const trimmed = query.trim()
-  const results = trimmed ? matchSuggestions(items, trimmed, rank) : initialSuggestions
+  const results = trimmed ? matchSuggestions(items, trimmed, rank, extraText) : initialSuggestions
   const exact = trimmed ? findExact(items, trimmed) : undefined
 
   const submit = () => {

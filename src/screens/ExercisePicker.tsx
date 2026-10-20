@@ -25,8 +25,9 @@ export function ExercisePicker({ workout, onFinished, onOpenHistory }: Props) {
   const [menu, setMenu] = useState(false)
 
   const data = useLiveQuery(async () => {
-    const [exercises, entries, type, location, suggestedIds, setCount] = await Promise.all([
+    const [exercises, groups, entries, type, location, suggestedIds, setCount] = await Promise.all([
       db.exercises.toArray(),
+      db.exerciseGroups.toArray(),
       db.entries.toArray(),
       db.workoutTypes.get(workout.workoutTypeId),
       db.locations.get(workout.locationId),
@@ -38,7 +39,7 @@ export function ExercisePicker({ workout, onFinished, onOpenHistory }: Props) {
     const here = entries.filter((e) => e.workoutId === workout.id).sort((a, b) => a.position - b.position)
     const lastHere = here.at(-1)
     const lastName = lastHere && exercises.find((e) => e.id === lastHere.exerciseId)?.name
-    return { exercises, lastUsed, type, location, suggestedIds, doneHere: here.length, lastName, setCount }
+    return { exercises, groups: new Map(groups.map((g) => [g.id, g.name])), lastUsed, type, location, suggestedIds, doneHere: here.length, lastName, setCount }
   }, [workout.id])
   if (!data) return null
 
@@ -69,7 +70,6 @@ export function ExercisePicker({ workout, onFinished, onOpenHistory }: Props) {
     return (
       <ExerciseForm
         initialName={newName}
-        exercises={data.exercises}
         submitLabel="Anlegen & starten"
         onCancel={() => setNewName(null)}
         onSubmit={async (input) => {
@@ -108,7 +108,8 @@ export function ExercisePicker({ workout, onFinished, onOpenHistory }: Props) {
         items={data.exercises}
         initialSuggestions={initial}
         rank={rank}
-        hint={(e) => (e.parentId ? byId.get(e.parentId)?.name : undefined)}
+        hint={(e) => (e.groupId ? data.groups.get(e.groupId) : undefined)}
+        extraText={(e) => (e.groupId ? data.groups.get(e.groupId) : undefined)}
         onSelect={choose}
         onCreate={setNewName}
       />

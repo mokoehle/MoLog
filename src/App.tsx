@@ -4,6 +4,7 @@ import { db } from './db/db'
 import type { Id } from './db/schema'
 import { useEdgeSwipeBack } from './hooks/useEdgeSwipeBack'
 import { ExerciseDetail } from './screens/ExerciseDetail'
+import { GroupDetail } from './screens/GroupDetail'
 import { ExercisePicker } from './screens/ExercisePicker'
 import { ExerciseScreen } from './screens/ExerciseScreen'
 import { History } from './screens/History'
@@ -19,6 +20,7 @@ type View =
   | { name: 'history' }
   | { name: 'workout'; id: Id; justFinished?: boolean }
   | { name: 'exercise'; id: Id }
+  | { name: 'group'; id: Id }
 
 /**
  * Navigation über einen einfachen Stack. Unterste Ebene ist der Startscreen – oder, wenn ein
@@ -62,6 +64,7 @@ export function App() {
   const openExercise = (id: Id) => push({ name: 'exercise', id })
   const openWorkout = (id: Id) => push({ name: 'workout', id })
   const openHistory = () => push({ name: 'history' })
+  const openGroup = (id: Id) => push({ name: 'group', id })
 
   const overlay = (): ReactNode => {
     switch (view.name) {
@@ -70,7 +73,7 @@ export function App() {
       case 'settings':
         return <Settings onClose={back} />
       case 'history':
-        return <History onBack={back} onOpenWorkout={openWorkout} onOpenExercise={openExercise} />
+        return <History onBack={back} onOpenWorkout={openWorkout} onOpenExercise={openExercise} onOpenGroup={openGroup} />
       case 'workout':
         return (
           <WorkoutView
@@ -88,7 +91,17 @@ export function App() {
             exerciseId={view.id}
             onBack={back}
             onOpenWorkout={openWorkout}
+            onOpenGroup={openGroup}
+          />
+        )
+      case 'group':
+        return (
+          <GroupDetail
+            key={view.id}
+            groupId={view.id}
+            onBack={back}
             onOpenExercise={openExercise}
+            onOpenWorkout={openWorkout}
           />
         )
       default:

@@ -1,5 +1,5 @@
 import { db } from '../db/db'
-import type { Exercise, ExerciseEntry, Id, Location, Workout, WorkoutSet, WorkoutType } from '../db/schema'
+import type { Exercise, ExerciseEntry, ExerciseGroup, Id, Location, Workout, WorkoutSet, WorkoutType } from '../db/schema'
 
 /**
  * Auswertungen. Alle Daten werden einmal komplett geladen und im Speicher indiziert –
@@ -21,8 +21,9 @@ export interface AllData {
   setsByEntry: Map<Id, WorkoutSet[]> // nach Reihenfolge
   /** Alle Einheiten einer Übung, älteste zuerst. */
   sessionsByExercise: Map<Id, Session[]>
-  /** Direkte Varianten einer Übung. */
-  variants: Map<Id, Exercise[]>
+  groups: Map<Id, ExerciseGroup>
+  /** Übungen je Gruppe, alphabetisch */
+  exercisesByGroup: Map<Id, Exercise[]>
 }
 
 const groupBy = <T, K>(rows: T[], key: (r: T) => K) => {
@@ -37,9 +38,10 @@ const groupBy = <T, K>(rows: T[], key: (r: T) => K) => {
 }
 
 export async function loadAll(): Promise<AllData> {
-  const [workouts, exercises, locations, types, entries, sets] = await Promise.all([
+  const [workouts, exercises, groups, locations, types, entries, sets] = await Promise.all([
     db.workouts.toArray(),
     db.exercises.toArray(),
+    db.exerciseGroups.toArray(),
     db.locations.toArray(),
     db.workoutTypes.toArray(),
     db.entries.toArray(),
@@ -63,10 +65,11 @@ export async function loadAll(): Promise<AllData> {
     sessionsByExercise.set(entry.exerciseId, list)
   }
 
-  const variants = groupBy(
-    exercises.filter((e) => e.parentId),
-    (e) => e.parentId!,
+  const exercisesByGroup = groupBy(
+    exercises.filter((e) => e.groupId),
+    (e) => e.groupId!,
   )
+  for (const list of exercisesByGroup.values()) list.sort((a, b) => a.name.localeCompare(b.name, 'de'))
 
   return {
     workouts: finished,
@@ -76,7 +79,8 @@ export async function loadAll(): Promise<AllData> {
     entriesByWorkout,
     setsByEntry,
     sessionsByExercise,
-    variants,
+    groups: new Map(groups.map((g) => [g.id, g])),
+    exercisesByGroup,
   }
 }
 
@@ -133,4 +137,11 @@ export function workoutTotals(data: AllData, workoutId: Id) {
   const entries = (data.entriesByWorkout.get(workoutId) ?? []).filter((e) => data.setsByEntry.get(e.id)?.length)
   const sets = entries.flatMap((e) => data.setsByEntry.get(e.id) ?? [])
   return { exercises: entries.length, sets: sets.length, volume: volume(sets), entries }
+}
+
+/** Alle Einheiten aller Übungen einer Gruppe, älteste zuerst. */
+export function groupSessions(data: AllData, groupId: Id): (Session & { exercise: Exercise })[] {
+  return (data.exercisesByGroup.get(groupId) ?? [])
+    .flatMap((exercise) => (data.sessionsByExercise.get(exercise.id) ?? []).map((s) => ({ ...s, exercise })))
+    .sort((a, b) => a.entry.startedAt - b.entry.startedAt)
 }

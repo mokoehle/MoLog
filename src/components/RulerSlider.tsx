@@ -42,9 +42,14 @@ export function RulerSlider({ value, onChange, step, min, max, unit, majorEvery 
   // Wert von außen geändert (z. B. neue Übung) → Skala nachziehen.
   useEffect(() => {
     if (!drag.current && anim.current === null) {
-      setPos(value / step)
-      lastStep.current = Math.round(value / step)
+      // Wert passt nicht zur Schrittweite (z. B. 22,5 kg bei 1-kg-Schritten) → auf nächsten Strich einrasten,
+      // damit angezeigter und gespeicherter Wert immer übereinstimmen.
+      const snapped = Math.min(max, Math.max(min, Math.round(value / step) * step))
+      if (Math.abs(snapped - value) > 1e-9) onChange(Number(snapped.toFixed(4)))
+      setPos(snapped / step)
+      lastStep.current = Math.round(snapped / step)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, step])
 
   useEffect(() => () => stopAnim(), [])

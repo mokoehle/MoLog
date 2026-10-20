@@ -1,7 +1,5 @@
 import { db, newId } from '../db/db'
-import type { Exercise, ExerciseEntry, Id, Measure, WorkoutSet } from '../db/schema'
-
-export const WEIGHT_STEP = 2.5
+import type { Equipment, Exercise, ExerciseEntry, Id, Measure, WorkoutSet } from '../db/schema'
 
 export interface SetValues {
   weightKg: number
@@ -25,20 +23,25 @@ export async function createWorkoutType(name: string) {
   return type
 }
 
-export async function createExercise(input: {
+export async function createGroup(name: string) {
+  const group = { id: newId(), name: name.trim(), createdAt: Date.now() }
+  await db.exerciseGroups.add(group)
+  return group
+}
+
+/** Alles an einer Übung, was man beim Anlegen/Bearbeiten einstellt. */
+export interface ExerciseInput {
   name: string
+  groupId?: Id
+  equipment: Equipment
   usesWeight: boolean
+  weightStep: number
   measure: Measure
-  parentId?: Id
-}): Promise<Exercise> {
-  const ex: Exercise = {
-    id: newId(),
-    name: input.name.trim(),
-    usesWeight: input.usesWeight,
-    measure: input.measure,
-    createdAt: Date.now(),
-    ...(input.parentId ? { parentId: input.parentId } : {}),
-  }
+}
+
+export async function createExercise(input: ExerciseInput): Promise<Exercise> {
+  const ex: Exercise = { id: newId(), ...input, name: input.name.trim(), createdAt: Date.now() }
+  if (!ex.groupId) delete ex.groupId
   await db.exercises.add(ex)
   return ex
 }
@@ -158,11 +161,9 @@ export async function deleteWorkout(workoutId: Id) {
 }
 
 /** Ändert Name/Einstellungen einer Übung. Bereits gespeicherte Sätze bleiben unverändert. */
-export async function updateExercise(
-  id: Id,
-  patch: { name: string; usesWeight: boolean; measure: Measure; parentId?: Id },
-) {
-  await db.exercises.update(id, { ...patch, name: patch.name.trim(), parentId: patch.parentId })
+export async function updateExercise(id: Id, input: ExerciseInput) {
+  // groupId: undefined entfernt die Gruppe
+  await db.exercises.update(id, { ...input, name: input.name.trim() })
 }
 
 /**

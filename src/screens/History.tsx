@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
-import type { Exercise, Id } from '../db/schema'
+import type { Exercise, ExerciseGroup, Id } from '../db/schema'
 import { fmtDuration, fmtMonth, fmtNum, fmtRelative, fmtShortDay, plural } from '../logic/format'
 import { loadAll, primaryMetric, workoutTotals, type AllData } from '../logic/stats'
 
@@ -8,6 +8,7 @@ interface Props {
   onBack: () => void
   onOpenWorkout: (id: Id) => void
   onOpenExercise: (id: Id) => void
+  onOpenGroup: (id: Id) => void
 }
 
 type Tab = 'workouts' | 'exercises'
@@ -16,7 +17,7 @@ type ExerciseSort = 'recent' | 'frequent' | 'name'
 // Bleibt erhalten, wenn man in eine Detailansicht und wieder zurück geht.
 const remembered = { tab: 'workouts' as Tab, typeFilter: null as Id | null, sort: 'recent' as ExerciseSort }
 
-export function History({ onBack, onOpenWorkout, onOpenExercise }: Props) {
+export function History({ onBack, onOpenWorkout, onOpenExercise, onOpenGroup }: Props) {
   const [tab, setTab] = useState(remembered.tab)
   const data = useLiveQuery(loadAll)
 
@@ -47,7 +48,7 @@ export function History({ onBack, onOpenWorkout, onOpenExercise }: Props) {
         (tab === 'workouts' ? (
           <WorkoutList data={data} onOpen={onOpenWorkout} />
         ) : (
-          <ExerciseList data={data} onOpen={onOpenExercise} />
+          <ExerciseList data={data} onOpen={onOpenExercise} onOpenGroup={onOpenGroup} />
         ))}
     </div>
   )
@@ -123,7 +124,17 @@ function WorkoutList({ data, onOpen }: { data: AllData; onOpen: (id: Id) => void
   )
 }
 
-function ExerciseList({ data, onOpen }: { data: AllData; onOpen: (id: Id) => void }) {
+type ListItem = { kind: 'group'; group: ExerciseGroup; members: Exercise[] } | { kind: 'exercise'; ex: Exercise }
+
+function ExerciseList({
+  data,
+  onOpen,
+  onOpenGroup,
+}: {
+  data: AllData
+  onOpen: (id: Id) => void
+  onOpenGroup: (id: Id) => void
+}) {
   const [sort, setSort] = useState(remembered.sort)
 
   const info = (ex: Exercise) => {
@@ -134,27 +145,37 @@ function ExerciseList({ data, onOpen }: { data: AllData; onOpen: (id: Id) => voi
     return { count: sessions.length, last: last?.workout.startedAt ?? 0, best, unit: metric.unit }
   }
 
-  // Basis-Übungen mit ihren Varianten darunter
-  const roots = [...data.exercises.values()].filter((e) => !e.parentId || !data.exercises.has(e.parentId))
-  const groupScore = (ex: Exercise) => {
-    const all = [ex, ...(data.variants.get(ex.id) ?? [])].map(info)
-    if (sort === 'frequent') return -all.reduce((n, i) => n + i.count, 0)
-    return -Math.max(...all.map((i) => i.last))
+  // Gruppen (mit ihren Übungen darunter) und Übungen ohne Gruppe in einer Liste
+  const items: ListItem[] = [
+    ...[...data.groups.values()].map((group) => ({
+      kind: 'group' as const,
+      group,
+      members: data.exercisesByGroup.get(group.id) ?? [],
+    })),
+    ...[...data.exercises.values()]
+      .filter((ex) => !ex.groupId || !data.groups.has(ex.groupId))
+      .map((ex) => ({ kind: 'exercise' as const, ex })),
+  ]
+  const itemName = (i: ListItem) => (i.kind === 'group' ? i.group.name : i.ex.name)
+  const score = (i: ListItem) => {
+    const all = (i.kind === 'group' ? i.members : [i.ex]).map(info)
+    if (sort === 'frequent') return -all.reduce((n, x) => n + x.count, 0)
+    return -Math.max(0, ...all.map((x) => x.last))
   }
-  roots.sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name, 'de') : groupScore(a) - groupScore(b)))
+  items.sort((a, b) => (sort === 'name' ? itemName(a).localeCompare(itemName(b), 'de') : score(a) - score(b)))
 
   const choose = (s: ExerciseSort) => {
     remembered.sort = s
     setSort(s)
   }
 
-  if (roots.length === 0) return <p className="muted">Noch keine Übungen.</p>
+  if (items.length === 0) return <p className="muted">Noch keine Übungen.</p>
 
-  const row = (ex: Exercise, variant: boolean) => {
+  const row = (ex: Exercise, inGroup: boolean) => {
     const i = info(ex)
     return (
       <li key={ex.id}>
-        <button className={variant ? 'list-card variant' : 'list-card'} onClick={() => onOpen(ex.id)}>
+        <button className={inGroup ? 'list-card variant' : 'list-card'} onClick={() => onOpen(ex.id)}>
           <span className="list-card-top">
             <strong>{ex.name}</strong>
             {i.best !== null && (
@@ -187,12 +208,19 @@ function ExerciseList({ data, onOpen }: { data: AllData; onOpen: (id: Id) => voi
         ))}
       </div>
       <ul className="card-list">
-        {roots.flatMap((ex) => [
-          row(ex, false),
-          ...(data.variants.get(ex.id) ?? [])
-            .sort((a, b) => a.name.localeCompare(b.name, 'de'))
-            .map((v) => row(v, true)),
-        ])}
+        {items.flatMap((item) =>
+          item.kind === 'exercise'
+            ? [row(item.ex, false)]
+            : [
+                <li key={item.group.id}>
+                  <button className="group-row" onClick={() => onOpenGroup(item.group.id)}>
+                    <strong>{item.group.name}</strong>
+                    <span className="muted small">{plural(item.members.length, 'Übung', 'Übungen')} ›</span>
+                  </button>
+                </li>,
+                ...item.members.map((ex) => row(ex, true)),
+              ],
+        )}
       </ul>
     </>
   )

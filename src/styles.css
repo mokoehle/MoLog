@@ -995,3 +995,32 @@ ul {
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
+
+/* ---------- Übungsgruppen ---------- */
+
+.group-row {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  text-align: left;
+  padding: 12px 4px 2px;
+  font-size: 17px;
+}
+
+.group-row strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.choice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choice-grid .chip {
+  font-size: 15px;
+  padding: 9px 14px;
+}

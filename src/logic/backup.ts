@@ -10,6 +10,7 @@ export async function exportAll(): Promise<ExportFile> {
     data: {
       locations: await db.locations.toArray(),
       workoutTypes: await db.workoutTypes.toArray(),
+      exerciseGroups: await db.exerciseGroups.toArray(),
       exercises: await db.exercises.toArray(),
       workouts: await db.workouts.toArray(),
       entries: await db.entries.toArray(),
@@ -53,12 +54,13 @@ export async function downloadCsv() {
 export async function importAll(text: string) {
   const file = JSON.parse(text) as ExportFile
   if (file.app !== 'molog' || !file.data) throw new Error('Keine MoLog-Exportdatei')
-  if (file.schemaVersion > SCHEMA_VERSION) throw new Error('Datei stammt aus einer neueren App-Version')
+  if (file.schemaVersion !== SCHEMA_VERSION) throw new Error(`Datei hat Version ${file.schemaVersion}, die App erwartet ${SCHEMA_VERSION}`)
   const d = file.data
-  await db.transaction('rw', [db.locations, db.workoutTypes, db.exercises, db.workouts, db.entries, db.sets], async () => {
+  await db.transaction('rw', [db.locations, db.workoutTypes, db.exerciseGroups, db.exercises, db.workouts, db.entries, db.sets], async () => {
     await Promise.all([
       db.locations.clear(),
       db.workoutTypes.clear(),
+      db.exerciseGroups.clear(),
       db.exercises.clear(),
       db.workouts.clear(),
       db.entries.clear(),
@@ -66,6 +68,7 @@ export async function importAll(text: string) {
     ])
     await db.locations.bulkAdd(d.locations)
     await db.workoutTypes.bulkAdd(d.workoutTypes)
+    await db.exerciseGroups.bulkAdd(d.exerciseGroups ?? [])
     await db.exercises.bulkAdd(d.exercises)
     await db.workouts.bulkAdd(d.workouts)
     await db.entries.bulkAdd(d.entries)

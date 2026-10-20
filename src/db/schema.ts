@@ -25,19 +25,32 @@ export interface WorkoutType {
 /** Was pro Satz gezählt wird. */
 export type Measure = 'reps' | 'seconds'
 
+/** Gerät einer Übung – bestimmt u. a. die vorgeschlagene Schrittweite des Gewichts-Sliders. */
+export type Equipment = 'barbell' | 'dumbbell' | 'cable' | 'machine' | 'bodyweight' | 'other'
+
+/**
+ * Sammelbegriff für mehrere Übungen, z. B. "Rudern" für T-Bar-Rudern, Kabelrudern, Kurzhantelrudern.
+ * Wird nie direkt geloggt, dient zum Sortieren und für Auswertungen über alle Varianten.
+ */
+export interface ExerciseGroup {
+  id: Id
+  name: string
+  createdAt: number
+}
+
+/** Eine konkrete Übung – das, was im Training geloggt wird. */
 export interface Exercise {
   id: Id
   name: string
+  /** Optional: Gruppe, zu der die Übung gehört. */
+  groupId?: Id
+  equipment: Equipment
   /** Ob pro Satz ein (Zusatz-)Gewicht erfasst wird. */
   usesWeight: boolean
+  /** Schrittweite des Gewichts-Sliders in kg, z. B. 1 bei Kurzhanteln. */
+  weightStep: number
   /** Wiederholungen oder Sekunden (Halteübungen). */
   measure: Measure
-  /**
-   * Optional: Diese Übung ist eine Variante einer anderen,
-   * z. B. "Klimmzüge mit Gewicht" → Parent "Klimmzüge".
-   * Für Auswertungen lassen sich Varianten so zum Parent zusammenfassen.
-   */
-  parentId?: Id
   createdAt: number
 }
 
@@ -84,7 +97,7 @@ export interface WorkoutSet {
   loggedAt: number
 }
 
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 /** Format für Export/Import. */
 export interface ExportFile {
@@ -94,6 +107,7 @@ export interface ExportFile {
   data: {
     locations: Location[]
     workoutTypes: WorkoutType[]
+    exerciseGroups: ExerciseGroup[]
     exercises: Exercise[]
     workouts: Workout[]
     entries: ExerciseEntry[]

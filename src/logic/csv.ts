@@ -1,4 +1,5 @@
 import type { ExportFile } from '../db/schema'
+import { equipmentInfo } from './equipment'
 
 /**
  * CSV mit einer Zeile pro Satz – flach und selbsterklärend, z. B. zum Auswerten mit einer KI
@@ -12,7 +13,8 @@ const COLUMNS = [
   'training_nr',
   'uebung_nr',
   'uebung',
-  'basis_uebung',
+  'gruppe',
+  'geraet',
   'uebung_start',
   'uebung_ende',
   'uebung_dauer_min',
@@ -43,6 +45,7 @@ export function toCsv({ data }: ExportFile): string {
   const locations = byId(data.locations)
   const types = byId(data.workoutTypes)
   const exercises = byId(data.exercises)
+  const groups = byId(data.exerciseGroups ?? [])
   const entries = byId(data.entries)
 
   const workouts = [...data.workouts].sort((a, b) => a.startedAt - b.startedAt)
@@ -72,7 +75,8 @@ export function toCsv({ data }: ExportFile): string {
       workoutNr.get(w.id),
       entry.position + 1,
       ex?.name,
-      ex?.parentId ? exercises.get(ex.parentId)?.name : ex?.name,
+      ex?.groupId ? groups.get(ex.groupId)?.name : null,
+      ex ? equipmentInfo(ex.equipment).label : null,
       localTime(entry.startedAt),
       entry.endedAt ? localTime(entry.endedAt) : null,
       entry.endedAt ? Math.round((entry.endedAt - entry.startedAt) / 6000) / 10 : null,
