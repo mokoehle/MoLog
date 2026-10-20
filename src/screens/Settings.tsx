@@ -62,6 +62,16 @@ export function Settings({ onClose }: Props) {
         ))}
       </div>
 
+      <label className="field-label">Vibration beim Slider</label>
+      <div className="segmented">
+        <button className={settings.haptics ? 'active' : ''} onClick={() => updateSettings({ haptics: true })}>
+          An
+        </button>
+        <button className={!settings.haptics ? 'active' : ''} onClick={() => updateSettings({ haptics: false })}>
+          Aus
+        </button>
+      </div>
+
       <label className="field-label">Daten</label>
       <div className="settings-list">
         <button className="settings-row" onClick={downloadExport}>

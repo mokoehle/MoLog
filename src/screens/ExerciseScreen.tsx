@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState } from 'react'
 import { RulerSlider } from '../components/RulerSlider'
 import { db } from '../db/db'
+import { haptic } from '../haptics'
 import type { ExerciseEntry, Workout, WorkoutSet } from '../db/schema'
 import { finishExercise, getStartValues, logSet, undoLastSet, WEIGHT_STEP, type SetValues } from '../logic/workout'
 
@@ -105,7 +106,10 @@ export function ExerciseScreen({ workout, entry }: Props) {
       </div>
 
       <div className="actions">
-        <button className="button button-primary" onClick={() => logSet(entry, exercise, values)}>
+        <button className="button button-primary" onClick={() => {
+            haptic()
+            void logSet(entry, exercise, values)
+          }}>
           Satz speichern
         </button>
         <button className="button button-secondary" onClick={() => finishExercise(entry.id)}>

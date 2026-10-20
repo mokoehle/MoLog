@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { haptic } from '../haptics'
 
 interface Props {
   value: number
@@ -32,6 +33,7 @@ export function RulerSlider({ value, onChange, step, min, max, unit, majorEvery 
   const [pos, setPos] = useState(value / step)
   const drag = useRef<{ startX: number; startPos: number; lastX: number; lastT: number; v: number; moved: boolean } | null>(null)
   const anim = useRef<number | null>(null)
+  const lastStep = useRef(Math.round(value / step))
 
   const minPos = min / step
   const maxPos = max / step
@@ -39,7 +41,10 @@ export function RulerSlider({ value, onChange, step, min, max, unit, majorEvery 
 
   // Wert von außen geändert (z. B. neue Übung) → Skala nachziehen.
   useEffect(() => {
-    if (!drag.current && anim.current === null) setPos(value / step)
+    if (!drag.current && anim.current === null) {
+      setPos(value / step)
+      lastStep.current = Math.round(value / step)
+    }
   }, [value, step])
 
   useEffect(() => () => stopAnim(), [])
@@ -49,17 +54,27 @@ export function RulerSlider({ value, onChange, step, min, max, unit, majorEvery 
     anim.current = null
   }
 
+  // Bei jedem überfahrenen Strich ein Haptik-Tick
+  const tickIfMoved = (s: number) => {
+    if (s !== lastStep.current) {
+      lastStep.current = s
+      haptic()
+    }
+  }
+
   const apply = (p: number) => {
     const c = clamp(p)
     setPos(c)
-    const v = Math.round(c) * step
-    if (v !== value) onChange(Number(v.toFixed(4)))
+    const s = Math.round(c)
+    tickIfMoved(s)
+    if (s * step !== value) onChange(Number((s * step).toFixed(4)))
     return c
   }
 
   const settle = (p: number) => {
     const snapped = Math.round(clamp(p))
     setPos(snapped)
+    tickIfMoved(snapped)
     onChange(Number((snapped * step).toFixed(4)))
   }
 
