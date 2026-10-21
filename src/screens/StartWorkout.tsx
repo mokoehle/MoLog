@@ -40,7 +40,7 @@ export function StartWorkout({ onCancel, onStarted }: Props) {
   }
 
   return (
-    <div className="screen">
+    <div className="screen screen-fit">
       <header className="topbar">
         <button className="link-button" onClick={location ? () => setLocation(null) : onCancel}>
           ‹ Zurück
@@ -56,6 +56,7 @@ export function StartWorkout({ onCancel, onStarted }: Props) {
           items={data.locations}
           initialSuggestions={[...data.locations].sort((a, b) => locRank(a) - locRank(b))}
           rank={locRank}
+          centered
           onSelect={setLocation}
           onCreate={async (name) => setLocation(await createLocation(name))}
         />
@@ -67,6 +68,7 @@ export function StartWorkout({ onCancel, onStarted }: Props) {
           items={data.types}
           initialSuggestions={[...data.types].sort((a, b) => typeRank(a) - typeRank(b))}
           rank={typeRank}
+          centered
           onSelect={(t) => begin(t.id)}
           onCreate={async (name) => begin((await createWorkoutType(name)).id)}
         />

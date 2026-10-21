@@ -14,13 +14,15 @@ interface Props<T extends Named> {
   onSelect: (item: T) => void
   onCreate: (name: string) => void
   autoFocus?: boolean
+  /** Feld mittig im sichtbaren Bereich, Vorschläge darunter scrollbar (für ganze Screens). */
+  centered?: boolean
 }
 
 const MAX_RESULTS = 6
 
 /** Textfeld mit Vorschlägen. Gibt es den Namen noch nicht, kann er direkt angelegt werden. */
 export function Autocomplete<T extends Named>(props: Props<T>) {
-  const { label, placeholder, items, initialSuggestions, rank, hint, extraText, onSelect, onCreate, autoFocus = true } = props
+  const { label, placeholder, items, initialSuggestions, rank, hint, extraText, onSelect, onCreate, autoFocus = true, centered = false } = props
   const [query, setQuery] = useState('')
 
   const trimmed = query.trim()
@@ -35,7 +37,9 @@ export function Autocomplete<T extends Named>(props: Props<T>) {
   }
 
   return (
-    <div className="autocomplete">
+    <div className={centered ? 'autocomplete autocomplete-centered' : 'autocomplete'}>
+      {/* gleich groß wie die Vorschlagsliste → Eingabefeld steht genau in der Mitte und springt nicht */}
+      {centered && <div className="autocomplete-spacer" />}
       <label className="field-label">{label}</label>
       <form
         onSubmit={(e) => {
@@ -57,7 +61,7 @@ export function Autocomplete<T extends Named>(props: Props<T>) {
         />
       </form>
       <ul className="suggestions">
-        {results.slice(0, MAX_RESULTS).map((item) => (
+        {results.slice(0, centered ? MAX_RESULTS * 2 : MAX_RESULTS).map((item) => (
           <li key={item.id}>
             <button type="button" className="suggestion" onClick={() => onSelect(item)}>
               <span>{item.name}</span>

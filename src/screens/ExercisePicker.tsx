@@ -81,7 +81,7 @@ export function ExercisePicker({ workout, onFinished, onOpenHistory }: Props) {
   }
 
   return (
-    <div className="screen">
+    <div className="screen screen-fit">
       <header className="topbar topbar-split">
         {data.doneHere > 0 ? (
           <button className="link-button" onClick={() => reopenLastEntry(workout.id)}>
@@ -112,10 +112,10 @@ export function ExercisePicker({ workout, onFinished, onOpenHistory }: Props) {
         extraText={(e) => (e.groupId ? data.groups.get(e.groupId) : undefined)}
         onSelect={choose}
         onCreate={setNewName}
+        centered
       />
 
-      <div className="spacer" />
-      <button className="button button-secondary" onClick={finish}>
+      <button className="button button-secondary hide-with-keyboard" onClick={finish}>
         Training beenden
       </button>
 

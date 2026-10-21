@@ -1024,3 +1024,42 @@ ul {
   font-size: 15px;
   padding: 9px 14px;
 }
+
+/* ---------- Eingabe-Screens: Feld mittig im sichtbaren Bereich ---------- */
+
+/* Füllt genau den sichtbaren Bereich – bei offener Tastatur also nur den Teil darüber */
+.screen-fit {
+  position: fixed;
+  top: var(--vvt, 0px);
+  left: 0;
+  right: 0;
+  height: var(--vvh, var(--app-h));
+  min-height: 0;
+  overflow: hidden;
+}
+
+:root[data-keyboard='open'] .screen-fit {
+  padding-bottom: 12px;
+}
+
+:root[data-keyboard='open'] .hide-with-keyboard {
+  display: none;
+}
+
+.autocomplete-centered {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Abstand oben und Vorschlagsliste unten sind gleich groß → Feld exakt mittig, springt beim Tippen nicht */
+.autocomplete-spacer {
+  flex: 1 1 0;
+}
+
+.autocomplete-centered .suggestions {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 4px;
+}
