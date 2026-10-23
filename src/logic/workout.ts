@@ -226,3 +226,19 @@ export async function previousSessions(exerciseId: Id, currentWorkoutId: Id, lim
   }
   return { sessions: all.slice(0, limit), otherLocation: false }
 }
+
+/** Korrigiert einen gespeicherten Satz (z. B. vertippt). */
+export async function updateSet(setId: Id, values: Pick<WorkoutSet, 'weightKg' | 'reps' | 'durationSec'>) {
+  await db.sets.update(setId, values)
+}
+
+/** Löscht einen Satz und nummeriert die übrigen Sätze der Übung neu durch. */
+export async function deleteSet(setId: Id) {
+  await db.transaction('rw', db.sets, async () => {
+    const set = await db.sets.get(setId)
+    if (!set) return
+    await db.sets.delete(setId)
+    const rest = await db.sets.where('entryId').equals(set.entryId).sortBy('position')
+    for (const [i, s] of rest.entries()) if (s.position !== i) await db.sets.update(s.id, { position: i })
+  })
+}

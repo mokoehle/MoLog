@@ -3,6 +3,7 @@ import { Fragment, useEffect, useState } from 'react'
 import { Autocomplete } from '../components/Autocomplete'
 import { HapticButton } from '../components/HapticButton'
 import { RulerSlider } from '../components/RulerSlider'
+import { SetEditor } from '../components/SetEditor'
 import { Sheet } from '../components/Sheet'
 import { db } from '../db/db'
 import { haptic } from '../haptics'
@@ -40,6 +41,7 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
   const [values, setValues] = useState<SetValues | null>(null)
   const [sheet, setSheet] = useState<'menu' | 'change' | 'sets' | null>(null)
   const [form, setForm] = useState<Form | null>(null)
+  const [editSetId, setEditSetId] = useState<string | null>(null)
   // Kurzes "✓ Gespeichert" als Bestätigung nach dem Speichern
   const [savedAt, setSavedAt] = useState(0)
   const justSaved = savedAt > 0
@@ -149,7 +151,11 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
         <button
           key={sets.length}
           className={sets.length ? 'set-info-button pulse-once' : 'set-info-button'}
-          onClick={() => sets.length && setSheet('sets')}
+          onClick={() => {
+            if (!sets.length) return
+            setEditSetId(null)
+            setSheet('sets')
+          }}
         >
           Satz {sets.length + 1}
           {last && (
@@ -220,15 +226,26 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
       </div>
 
       {sheet === 'sets' && (
-        <Sheet title={exercise.name} onClose={() => setSheet(null)}>
-          <ol className="set-list">
-            {sets.map((s, i) => (
-              <li key={s.id}>
-                <span className="muted">Satz {i + 1}</span>
-                <strong>{shortSet(s)}</strong>
-              </li>
-            ))}
-          </ol>
+        <Sheet title={exercise.name} onClose={() => (editSetId ? setEditSetId(null) : setSheet(null))}>
+          {editSetId && sets.some((s) => s.id === editSetId) ? (
+            <SetEditor
+              set={sets.find((s) => s.id === editSetId)!}
+              number={sets.findIndex((s) => s.id === editSetId) + 1}
+              exercise={exercise}
+              onDone={() => setEditSetId(null)}
+            />
+          ) : (
+            <ol className="set-list">
+              {sets.map((s, i) => (
+                <li key={s.id}>
+                  <button className="set-row" onClick={() => setEditSetId(s.id)}>
+                    <span className="muted">Satz {i + 1}</span>
+                    <strong>{shortSet(s)}</strong>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          )}
         </Sheet>
       )}
 

@@ -440,8 +440,7 @@ ul {
   font-size: 16px;
 }
 
-.list-card:active,
-.entry-card:active {
+.list-card:active {
   background: var(--surface-2);
 }
 
@@ -592,7 +591,13 @@ ul {
   gap: 8px;
 }
 
+.entry-title:active {
+  opacity: 0.6;
+}
+
 .entry-title {
+  width: 100%;
+  text-align: left;
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -1098,13 +1103,35 @@ ul {
   overflow: hidden;
 }
 
-.set-list li {
+.set-row {
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   padding: 14px 16px;
   font-size: 18px;
   font-variant-numeric: tabular-nums;
+  text-align: left;
+}
+
+.set-row:active {
+  background: var(--surface-2);
+}
+
+.set-row strong::after {
+  content: ' ›';
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.set-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.set-editor .ruler-value {
+  font-size: 64px;
 }
 
 .set-list li + li {
@@ -1148,4 +1175,13 @@ ul {
   100% {
     transform: rotate(0deg);
   }
+}
+
+/* Satz-Chips, die man antippen kann (Satz bearbeiten) */
+button.set-chip {
+  color: inherit;
+}
+
+button.set-chip:active {
+  background: var(--tick);
 }

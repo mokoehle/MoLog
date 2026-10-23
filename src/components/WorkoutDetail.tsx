@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import type { Id } from '../db/schema'
 import { fmtDay, fmtDuration, fmtNum, fmtTime, plural, shortSet } from '../logic/format'
 import { compareEntry, primaryMetric, workoutTotals, type AllData } from '../logic/stats'
+import { SetEditor } from './SetEditor'
+import { Sheet } from './Sheet'
 
 interface Props {
   data: AllData
@@ -10,9 +13,21 @@ interface Props {
 
 /** Übersicht eines Trainings: Kennzahlen + Übungen in der gemachten Reihenfolge. */
 export function WorkoutDetail({ data, workoutId, onOpenExercise }: Props) {
+  // Satz, der gerade bearbeitet wird (Antippen eines Satz-Chips)
+  const [editSetId, setEditSetId] = useState<Id | null>(null)
   const workout = data.workouts.find((w) => w.id === workoutId)
   if (!workout) return <p className="muted">Training nicht gefunden.</p>
   const totals = workoutTotals(data, workoutId)
+
+  const editing = (() => {
+    for (const entry of totals.entries) {
+      const sets = data.setsByEntry.get(entry.id) ?? []
+      const i = sets.findIndex((s) => s.id === editSetId)
+      if (i >= 0) return { set: sets[i], number: i + 1 }
+    }
+    return null
+  })()
+  const editingExercise = editing ? data.exercises.get(editing.set.exerciseId) : undefined
 
   return (
     <>
@@ -41,18 +56,21 @@ export function WorkoutDetail({ data, workoutId, onOpenExercise }: Props) {
           const delta = cmp?.previous !== undefined ? cmp.value - cmp.previous : 0
           return (
             <li key={entry.id}>
-              <button className="entry-card" onClick={() => onOpenExercise(entry.exerciseId)}>
+              {/* Name → Übung öffnen, Satz-Chips → Satz bearbeiten */}
+              <div className="entry-card">
                 <span className="entry-index">{i + 1}</span>
                 <span className="entry-body">
-                  <span className="entry-title">
-                    <strong>{ex?.name}</strong>
+                  <button className="entry-title" onClick={() => onOpenExercise(entry.exerciseId)}>
+                    <strong>
+                      {ex?.name} <span className="title-chevron">›</span>
+                    </strong>
                     {entry.endedAt && <span className="muted">{fmtDuration(entry.endedAt - entry.startedAt)}</span>}
-                  </span>
+                  </button>
                   <span className="set-chips">
                     {sets.map((s) => (
-                      <span key={s.id} className="set-chip">
+                      <button key={s.id} className="set-chip" onClick={() => setEditSetId(s.id)}>
                         {shortSet(s)}
-                      </span>
+                      </button>
                     ))}
                   </span>
                   {cmp && metric && (
@@ -70,12 +88,23 @@ export function WorkoutDetail({ data, workoutId, onOpenExercise }: Props) {
                     </span>
                   )}
                 </span>
-              </button>
+              </div>
             </li>
           )
         })}
       </ol>
       {totals.entries.length === 0 && <p className="muted">{plural(0, 'Übung', 'Übungen')}</p>}
+
+      {editing && editingExercise && (
+        <Sheet title={editingExercise.name} onClose={() => setEditSetId(null)}>
+          <SetEditor
+            set={editing.set}
+            number={editing.number}
+            exercise={editingExercise}
+            onDone={() => setEditSetId(null)}
+          />
+        </Sheet>
+      )}
     </>
   )
 }
