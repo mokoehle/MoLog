@@ -87,9 +87,6 @@ export async function loadAll(): Promise<AllData> {
 
 // ---------- Kennzahlen ----------
 
-/** Geschätztes 1-Wiederholungs-Maximum nach Epley. */
-export const estimate1RM = (weight: number, reps: number) => (reps === 1 ? weight : weight * (1 + reps / 30))
-
 export interface Metric {
   label: string
   unit: string

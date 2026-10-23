@@ -3,6 +3,8 @@ import { useState } from 'react'
 import type { Exercise, ExerciseGroup, Id } from '../db/schema'
 import { fmtDuration, fmtMonth, fmtNum, fmtRelative, fmtShortDay, plural } from '../logic/format'
 import { loadAll, primaryMetric, workoutTotals, type AllData } from '../logic/stats'
+import { createExercise } from '../logic/workout'
+import { ExerciseForm } from './ExerciseForm'
 
 interface Props {
   onBack: () => void
@@ -19,7 +21,22 @@ const remembered = { tab: 'workouts' as Tab, typeFilter: null as Id | null, sort
 
 export function History({ onBack, onOpenWorkout, onOpenExercise, onOpenGroup }: Props) {
   const [tab, setTab] = useState(remembered.tab)
+  const [creating, setCreating] = useState(false)
   const data = useLiveQuery(loadAll)
+
+  if (creating) {
+    return (
+      <ExerciseForm
+        initialName=""
+        submitLabel="Anlegen"
+        onCancel={() => setCreating(false)}
+        onSubmit={async (input) => {
+          await createExercise(input)
+          setCreating(false)
+        }}
+      />
+    )
+  }
 
   const switchTab = (t: Tab) => {
     remembered.tab = t
@@ -48,7 +65,7 @@ export function History({ onBack, onOpenWorkout, onOpenExercise, onOpenGroup }: 
         (tab === 'workouts' ? (
           <WorkoutList data={data} onOpen={onOpenWorkout} />
         ) : (
-          <ExerciseList data={data} onOpen={onOpenExercise} onOpenGroup={onOpenGroup} />
+          <ExerciseList data={data} onOpen={onOpenExercise} onOpenGroup={onOpenGroup} onNew={() => setCreating(true)} />
         ))}
     </div>
   )
@@ -130,10 +147,12 @@ function ExerciseList({
   data,
   onOpen,
   onOpenGroup,
+  onNew,
 }: {
   data: AllData
   onOpen: (id: Id) => void
   onOpenGroup: (id: Id) => void
+  onNew: () => void
 }) {
   const [sort, setSort] = useState(remembered.sort)
 
@@ -169,7 +188,19 @@ function ExerciseList({
     setSort(s)
   }
 
-  if (items.length === 0) return <p className="muted">Noch keine Übungen.</p>
+  const newButton = (
+    <button className="button button-secondary" onClick={onNew}>
+      + Neue Übung
+    </button>
+  )
+
+  if (items.length === 0)
+    return (
+      <>
+        <p className="muted">Noch keine Übungen.</p>
+        {newButton}
+      </>
+    )
 
   const row = (ex: Exercise, inGroup: boolean) => {
     const i = info(ex)
@@ -222,6 +253,7 @@ function ExerciseList({
               ],
         )}
       </ul>
+      {newButton}
     </>
   )
 }

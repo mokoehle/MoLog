@@ -38,7 +38,7 @@ type Form = { mode: 'new'; name: string } | { mode: 'edit' }
 
 export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, onFinished }: Props) {
   const [values, setValues] = useState<SetValues | null>(null)
-  const [sheet, setSheet] = useState<'menu' | 'change' | null>(null)
+  const [sheet, setSheet] = useState<'menu' | 'change' | 'sets' | null>(null)
   const [form, setForm] = useState<Form | null>(null)
   // Kurzes "✓ Gespeichert" als Bestätigung nach dem Speichern
   const [savedAt, setSavedAt] = useState(0)
@@ -145,10 +145,20 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
       )}
 
       <div className="set-info">
-        <span key={sets.length} className={sets.length ? 'pulse-once' : undefined}>
+        {/* Antippen zeigt alle Sätze dieser Übung */}
+        <button
+          key={sets.length}
+          className={sets.length ? 'set-info-button pulse-once' : 'set-info-button'}
+          onClick={() => sets.length && setSheet('sets')}
+        >
           Satz {sets.length + 1}
-          {last && <> · zuletzt {describeSet(last)}</>}
-        </span>
+          {last && (
+            <>
+              {' · zuletzt '}
+              {describeSet(last)} <span className="title-chevron">›</span>
+            </>
+          )}
+        </button>
         {/* Bewusst hier oben statt bei den großen Buttons, damit sich deren Position nie verschiebt. */}
         {last && (
           <button className="link-button undo" onClick={() => undoLastSet(entry.id)}>
@@ -208,6 +218,19 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
           Nächste Übung
         </button>
       </div>
+
+      {sheet === 'sets' && (
+        <Sheet title={exercise.name} onClose={() => setSheet(null)}>
+          <ol className="set-list">
+            {sets.map((s, i) => (
+              <li key={s.id}>
+                <span className="muted">Satz {i + 1}</span>
+                <strong>{shortSet(s)}</strong>
+              </li>
+            ))}
+          </ol>
+        </Sheet>
+      )}
 
       {sheet === 'change' && (
         <Sheet title="Übung wechseln" onClose={() => setSheet(null)}>

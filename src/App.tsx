@@ -3,6 +3,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { db } from './db/db'
 import type { Id } from './db/schema'
 import { useEdgeSwipeBack } from './hooks/useEdgeSwipeBack'
+import { isFreshLaunch } from './launch'
+import { ResumePrompt } from './screens/ResumePrompt'
 import { ExerciseDetail } from './screens/ExerciseDetail'
 import { GroupDetail } from './screens/GroupDetail'
 import { ExercisePicker } from './screens/ExercisePicker'
@@ -34,11 +36,8 @@ export function App() {
   const push = (v: View) => setStack((s) => [...s, v])
   const back = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s))
   const reset = (...views: View[]) => setStack([{ name: 'home' }, ...views])
-
-  // Neue Ansicht → nach oben scrollen
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [view])
+  // Nach einem Neustart mit offenem Training einmal nachfragen (nicht bei Wechsel in den Hintergrund)
+  const [askResume, setAskResume] = useState(isFreshLaunch)
 
   const live = useLiveQuery(async () => {
     const workout = await db.workouts
@@ -54,6 +53,11 @@ export function App() {
       .first()
     return { workout, entry: entry ?? null }
   })
+
+  // Lief beim Start kein Training, gibt es auch später in dieser Sitzung nichts nachzufragen
+  useEffect(() => {
+    if (live && !live.workout) setAskResume(false)
+  }, [live])
 
   // Vom linken Rand wischen = zurück (nicht im Training selbst, dort liegen die Slider)
   const canGoBack = stack.length > 1 && view.name !== 'start' && !(view.name === 'workout' && view.justFinished)
@@ -127,6 +131,17 @@ export function App() {
         </div>
       )
     }
+    if (askResume)
+      return (
+        <ResumePrompt
+          workout={live.workout}
+          onContinue={() => setAskResume(false)}
+          onFinished={(saved) => {
+            setAskResume(false)
+            nav.onFinished(saved)
+          }}
+        />
+      )
     if (live.entry) return <ExerciseScreen key={live.entry.id} workout={live.workout} entry={live.entry} {...nav} />
     return <ExercisePicker workout={live.workout} {...nav} />
   }

@@ -5,7 +5,9 @@ import { Stat } from '../components/WorkoutDetail'
 import type { Id } from '../db/schema'
 import { fmtDuration, fmtNum, fmtShortDay, shortSet } from '../logic/format'
 import { dependsOnLocation, equipmentInfo } from '../logic/equipment'
-import { estimate1RM, loadAll, primaryMetric, totalReps } from '../logic/stats'
+import { loadAll, primaryMetric, totalReps } from '../logic/stats'
+import { updateExercise } from '../logic/workout'
+import { ExerciseForm } from './ExerciseForm'
 
 interface Props {
   exerciseId: Id
@@ -20,9 +22,25 @@ export function ExerciseDetail({ exerciseId, onBack, onOpenWorkout, onOpenGroup 
   const data = useLiveQuery(loadAll)
   // Gym-Filter bei Maschinen/Kabel; undefined = automatisch das zuletzt genutzte Gym
   const [gymChoice, setGymChoice] = useState<Id | undefined>(undefined)
+  const [editing, setEditing] = useState(false)
   if (!data) return null
   const ex = data.exercises.get(exerciseId)
   if (!ex) return null
+
+  if (editing) {
+    return (
+      <ExerciseForm
+        exercise={ex}
+        initialName={ex.name}
+        submitLabel="Speichern"
+        onCancel={() => setEditing(false)}
+        onSubmit={async (input) => {
+          await updateExercise(ex.id, input)
+          setEditing(false)
+        }}
+      />
+    )
+  }
 
   const allSessions = data.sessionsByExercise.get(ex.id) ?? []
   // Gyms, in denen die Übung gemacht wurde – zuletzt genutztes zuerst
@@ -36,11 +54,6 @@ export function ExerciseDetail({ exerciseId, onBack, onOpenWorkout, onOpenGroup 
   const best = sessions.length ? Math.max(...sessions.map((s) => metric.value(s.sets))) : null
   const durations = sessions.filter((s) => s.entry.endedAt).map((s) => s.entry.endedAt! - s.entry.startedAt)
   const avgDuration = durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : null
-  const best1RM =
-    ex.usesWeight && ex.measure === 'reps'
-      ? Math.max(0, ...sessions.flatMap((s) => s.sets.map((x) => estimate1RM(x.weightKg ?? 0, x.reps ?? 0))))
-      : 0
-
   const since = Date.now() - 30 * DAY
   const reps30 =
     ex.measure === 'reps'
@@ -51,11 +64,13 @@ export function ExerciseDetail({ exerciseId, onBack, onOpenWorkout, onOpenGroup 
 
   return (
     <div className="screen">
-      <header className="topbar">
+      <header className="topbar topbar-split">
         <button className="link-button" onClick={onBack}>
           ‹ Zurück
         </button>
-        <span className="topbar-title">Übung</span>
+        <button className="link-button" onClick={() => setEditing(true)}>
+          Bearbeiten
+        </button>
       </header>
 
       <div className="detail-head">
@@ -88,7 +103,6 @@ export function ExerciseDetail({ exerciseId, onBack, onOpenWorkout, onOpenGroup 
         <>
           <div className="stat-tiles">
             <Stat label={metric.label} value={`${fmtNum(best!)} ${metric.unit}`} />
-            {best1RM > 0 && <Stat label="Geschätztes 1RM" value={`${Math.round(best1RM)} kg`} />}
             <Stat label="Einheiten" value={String(sessions.length)} />
             {avgDuration !== null && <Stat label="Ø Dauer" value={fmtDuration(avgDuration)} />}
             {reps30 > 0 && (

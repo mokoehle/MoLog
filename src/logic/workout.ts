@@ -85,19 +85,35 @@ export async function undoLastSet(entryId: Id) {
   if (last) await db.sets.delete(last.id)
 }
 
-/** Schließt die Übung ab. Übungen ohne Satz werden verworfen, damit keine leeren Einträge entstehen. */
-export async function finishExercise(entryId: Id) {
+/**
+ * Schließt die Übung ab. Übungen ohne Satz werden verworfen, damit keine leeren Einträge entstehen.
+ * `atLastSet`: Ende = Zeitpunkt des letzten Satzes statt jetzt (für vergessene/abgebrochene Trainings).
+ */
+export async function finishExercise(entryId: Id, atLastSet = false) {
   await db.transaction('rw', db.entries, db.sets, async () => {
-    const count = await db.sets.where('entryId').equals(entryId).count()
-    if (count === 0) await db.entries.delete(entryId)
-    else await db.entries.update(entryId, { endedAt: Date.now() })
+    const sets = await db.sets.where('entryId').equals(entryId).sortBy('loggedAt')
+    if (sets.length === 0) await db.entries.delete(entryId)
+    else await db.entries.update(entryId, { endedAt: atLastSet ? sets.at(-1)!.loggedAt : Date.now() })
   })
 }
 
-/** Beendet das Training. Ein Training ohne Satz wird komplett verworfen. Gibt zurück, ob es gespeichert wurde. */
-export async function finishWorkout(workoutId: Id): Promise<boolean> {
+/** Zeitpunkt der letzten Aktivität im Training (letzter Satz, sonst Start der letzten Übung bzw. des Trainings). */
+export async function lastActivity(workoutId: Id): Promise<number> {
+  const [workout, entries, sets] = await Promise.all([
+    db.workouts.get(workoutId),
+    db.entries.where('workoutId').equals(workoutId).toArray(),
+    db.sets.where('workoutId').equals(workoutId).toArray(),
+  ])
+  return Math.max(workout?.startedAt ?? 0, ...entries.map((e) => e.startedAt), ...sets.map((s) => s.loggedAt))
+}
+
+/**
+ * Beendet das Training. Ein Training ohne Satz wird komplett verworfen. Gibt zurück, ob es gespeichert wurde.
+ * `atLastActivity`: Ende = letzte Aktivität statt jetzt – sonst hätte ein vergessenes Training 14 h Dauer.
+ */
+export async function finishWorkout(workoutId: Id, atLastActivity = false): Promise<boolean> {
   const open = await db.entries.where('workoutId').equals(workoutId).filter((e) => !e.endedAt).toArray()
-  for (const e of open) await finishExercise(e.id)
+  for (const e of open) await finishExercise(e.id, atLastActivity)
   const setCount = await db.sets.where('workoutId').equals(workoutId).count()
   if (setCount === 0) {
     await db.transaction('rw', db.workouts, db.entries, async () => {
@@ -106,7 +122,7 @@ export async function finishWorkout(workoutId: Id): Promise<boolean> {
     })
     return false
   }
-  await db.workouts.update(workoutId, { endedAt: Date.now() })
+  await db.workouts.update(workoutId, { endedAt: atLastActivity ? await lastActivity(workoutId) : Date.now() })
   return true
 }
 
