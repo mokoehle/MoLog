@@ -1,4 +1,5 @@
 import { db, newId } from '../db/db'
+import { dependsOnLocation } from './equipment'
 import type { Equipment, Exercise, ExerciseEntry, Id, Measure, WorkoutSet } from '../db/schema'
 
 export interface SetValues {
@@ -113,20 +114,13 @@ export async function finishWorkout(workoutId: Id): Promise<boolean> {
 
 /** Startwerte für eine Übung: der erste Satz vom letzten Mal, sonst Standardwerte. */
 export async function getStartValues(exerciseId: Id, currentWorkoutId: Id): Promise<SetValues> {
-  const entries = (await db.entries.where('exerciseId').equals(exerciseId).sortBy('startedAt')).reverse()
-  for (const entry of entries) {
-    if (entry.workoutId === currentWorkoutId) continue
-    const sets = await db.sets.where('entryId').equals(entry.id).sortBy('position')
-    const first = sets[0]
-    if (first) {
-      return {
-        weightKg: first.weightKg ?? DEFAULT_VALUES.weightKg,
-        reps: first.reps ?? DEFAULT_VALUES.reps,
-        durationSec: first.durationSec ?? DEFAULT_VALUES.durationSec,
-      }
-    }
+  const first = (await previousSessions(exerciseId, currentWorkoutId, 1)).sessions[0]?.sets[0]
+  if (!first) return DEFAULT_VALUES
+  return {
+    weightKg: first.weightKg ?? DEFAULT_VALUES.weightKg,
+    reps: first.reps ?? DEFAULT_VALUES.reps,
+    durationSec: first.durationSec ?? DEFAULT_VALUES.durationSec,
   }
-  return DEFAULT_VALUES
 }
 
 /**
@@ -192,16 +186,27 @@ export async function reopenLastEntry(workoutId: Id) {
   if (last) await db.entries.update(last.id, { endedAt: undefined })
 }
 
-/** Letzte Einheiten einer Übung vor dem aktuellen Training, neueste zuerst. */
+/**
+ * Frühere Einheiten einer Übung vor dem aktuellen Training, neueste zuerst.
+ * Bei Maschinen/Kabel zählen nur Einheiten im selben Gym (andere Maschine = andere Gewichte).
+ * Gibt es dort noch keine, dienen andere Gyms als Schätzung – dann ist `otherLocation` gesetzt.
+ */
 export async function previousSessions(exerciseId: Id, currentWorkoutId: Id, limit: number) {
+  const [exercise, current] = await Promise.all([db.exercises.get(exerciseId), db.workouts.get(currentWorkoutId)])
   const entries = (await db.entries.where('exerciseId').equals(exerciseId).sortBy('startedAt'))
     .reverse()
     .filter((e) => e.workoutId !== currentWorkoutId)
-  const result: { entry: ExerciseEntry; sets: WorkoutSet[] }[] = []
+
+  const all: { entry: ExerciseEntry; sets: WorkoutSet[]; locationId?: Id }[] = []
   for (const entry of entries) {
     const sets = await db.sets.where('entryId').equals(entry.id).sortBy('position')
-    if (sets.length) result.push({ entry, sets })
-    if (result.length >= limit) break
+    if (sets.length) all.push({ entry, sets, locationId: (await db.workouts.get(entry.workoutId))?.locationId })
   }
-  return result
+
+  if (exercise && current && dependsOnLocation(exercise.equipment)) {
+    const sameGym = all.filter((s) => s.locationId === current.locationId)
+    if (sameGym.length) return { sessions: sameGym.slice(0, limit), otherLocation: false }
+    return { sessions: all.slice(0, limit), otherLocation: all.length > 0 }
+  }
+  return { sessions: all.slice(0, limit), otherLocation: false }
 }

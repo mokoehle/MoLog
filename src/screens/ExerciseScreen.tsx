@@ -81,7 +81,8 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
   }, [entry.id, entry.exerciseId, workout.id])
 
   if (!data?.exercise || !values) return null
-  const { exercise, sets, exercises, previous } = data
+  const { exercise, sets, exercises } = data
+  const previous = data.previous.sessions
   const last = sets.at(-1)
   const lastTime = previous[0]
 
@@ -130,7 +131,9 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
 
       {lastTime && (
         <p className="last-time">
-          <span className="muted">Letztes Mal ({fmtRelative(lastTime.entry.startedAt)}):</span>{' '}
+          <span className="muted">
+            Letztes Mal ({data.previous.otherLocation ? 'anderes Gym' : fmtRelative(lastTime.entry.startedAt)}):
+          </span>{' '}
           {lastTime.sets.map((s, i) => (
             // Trennzeichen außerhalb von .nowrap, sonst kann die Zeile nirgends umbrechen
             <Fragment key={s.id}>

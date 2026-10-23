@@ -1,9 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useState } from 'react'
 import { LineChart } from '../components/LineChart'
 import { Stat } from '../components/WorkoutDetail'
 import type { Id } from '../db/schema'
 import { fmtDuration, fmtNum, fmtShortDay, shortSet } from '../logic/format'
-import { equipmentInfo } from '../logic/equipment'
+import { dependsOnLocation, equipmentInfo } from '../logic/equipment'
 import { estimate1RM, loadAll, primaryMetric, totalReps } from '../logic/stats'
 
 interface Props {
@@ -17,11 +18,18 @@ const DAY = 86400000
 
 export function ExerciseDetail({ exerciseId, onBack, onOpenWorkout, onOpenGroup }: Props) {
   const data = useLiveQuery(loadAll)
+  // Gym-Filter bei Maschinen/Kabel; undefined = automatisch das zuletzt genutzte Gym
+  const [gymChoice, setGymChoice] = useState<Id | undefined>(undefined)
   if (!data) return null
   const ex = data.exercises.get(exerciseId)
   if (!ex) return null
 
-  const sessions = data.sessionsByExercise.get(ex.id) ?? []
+  const allSessions = data.sessionsByExercise.get(ex.id) ?? []
+  // Gyms, in denen die Übung gemacht wurde – zuletzt genutztes zuerst
+  const gyms = [...new Set([...allSessions].reverse().map((s) => s.workout.locationId))]
+  const showGymFilter = dependsOnLocation(ex.equipment) && gyms.length > 1
+  const gym = showGymFilter ? (gymChoice ?? gyms[0]) : undefined
+  const sessions = gym ? allSessions.filter((s) => s.workout.locationId === gym) : allSessions
   const metric = primaryMetric(ex)
   const group = ex.groupId ? data.groups.get(ex.groupId) : undefined
 
@@ -64,13 +72,23 @@ export function ExerciseDetail({ exerciseId, onBack, onOpenWorkout, onOpenGroup 
         )}
       </div>
 
+      {showGymFilter && (
+        <div className="filter-chips">
+          {gyms.map((id) => (
+            <button key={id} className={gym === id ? 'chip active' : 'chip'} onClick={() => setGymChoice(id)}>
+              {data.locations.get(id)?.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {sessions.length === 0 ? (
         <p className="muted">Diese Übung wurde noch nicht gemacht.</p>
       ) : (
         <>
           <div className="stat-tiles">
             <Stat label={metric.label} value={`${fmtNum(best!)} ${metric.unit}`} />
-            {best1RM > 0 && <Stat label="Geschätztes 1RM" value={`${fmtNum(best1RM)} kg`} />}
+            {best1RM > 0 && <Stat label="Geschätztes 1RM" value={`${Math.round(best1RM)} kg`} />}
             <Stat label="Einheiten" value={String(sessions.length)} />
             {avgDuration !== null && <Stat label="Ø Dauer" value={fmtDuration(avgDuration)} />}
             {reps30 > 0 && (

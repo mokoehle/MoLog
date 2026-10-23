@@ -1,4 +1,5 @@
 import { db } from '../db/db'
+import { dependsOnLocation } from './equipment'
 import type { Exercise, ExerciseEntry, ExerciseGroup, Id, Location, Workout, WorkoutSet, WorkoutType } from '../db/schema'
 
 /**
@@ -127,8 +128,12 @@ export function compareEntry(data: AllData, entry: ExerciseEntry): EntryComparis
   if (!ex || !sets?.length) return null
   const metric = primaryMetric(ex)
   const value = metric.value(sets)
-  const earlier = (data.sessionsByExercise.get(ex.id) ?? []).filter((s) => s.entry.startedAt < entry.startedAt)
-  if (earlier.length === 0) return { value, isRecord: false, isFirst: true }
+  const all = (data.sessionsByExercise.get(ex.id) ?? []).filter((s) => s.entry.startedAt < entry.startedAt)
+  if (all.length === 0) return { value, isRecord: false, isFirst: true }
+  // Maschinen/Kabel nur mit demselben Gym vergleichen – sonst gibt es keinen sinnvollen Vergleich
+  const locationId = data.workouts.find((w) => w.id === entry.workoutId)?.locationId
+  const earlier = dependsOnLocation(ex.equipment) ? all.filter((s) => s.workout.locationId === locationId) : all
+  if (earlier.length === 0) return { value, isRecord: false, isFirst: false }
   const best = Math.max(...earlier.map((s) => metric.value(s.sets)))
   return { value, previous: metric.value(earlier.at(-1)!.sets), isRecord: value > best, isFirst: false }
 }
