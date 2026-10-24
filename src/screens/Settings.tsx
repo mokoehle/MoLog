@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { ViewportInfo } from '../components/ViewportInfo'
+import { VersionInfo } from '../components/VersionInfo'
 import { downloadCsv, downloadExport, importAll } from '../logic/backup'
 import { ACCENTS, updateSettings, useSettings, type Theme } from '../settings'
 
@@ -89,7 +89,7 @@ export function Settings({ onClose }: Props) {
       {message && <p className="muted">{message}</p>}
 
       <div className="spacer" />
-      <ViewportInfo />
+      <VersionInfo />
     </div>
   )
 }
