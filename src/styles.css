@@ -1185,3 +1185,48 @@ button.set-chip {
 button.set-chip:active {
   background: var(--tick);
 }
+
+/* ---------- Konto & Cloud ---------- */
+
+.account-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.account-box form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.code-input {
+  text-align: center;
+  letter-spacing: 8px;
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--text);
+}
+
+.settings-row:disabled {
+  opacity: 0.5;
+}
+
+.danger.small,
+p.danger {
+  color: #e5484d;
+}
+
+/* Eingabefelder im Konto-Kasten vom Kasten abheben */
+.account-box .text-input {
+  background: var(--bg);
+}

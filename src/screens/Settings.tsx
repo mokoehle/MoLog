@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { AccountSection } from '../components/AccountSection'
 import { VersionInfo } from '../components/VersionInfo'
 import { downloadCsv, downloadExport, importAll } from '../logic/backup'
 import { ACCENTS, updateSettings, useSettings, type Theme } from '../settings'
@@ -36,6 +37,8 @@ export function Settings({ onClose }: Props) {
         </button>
         <span className="topbar-title">Einstellungen</span>
       </header>
+
+      <AccountSection />
 
       <label className="field-label">Darstellung</label>
       <div className="segmented">

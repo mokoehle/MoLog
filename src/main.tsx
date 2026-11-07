@@ -5,9 +5,11 @@ import './styles.css'
 import { applySettings } from './settings'
 import './pwa'
 import { trackVisualViewport } from './visualViewport'
+import { startSync } from './sync/sync'
 
 applySettings()
 trackVisualViewport()
+startSync()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

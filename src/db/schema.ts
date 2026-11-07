@@ -13,6 +13,8 @@ export interface Location {
   id: Id
   name: string
   createdAt: number
+  /** Letzte Änderung (für den Sync, wird automatisch gesetzt). */
+  updatedAt?: number
 }
 
 /** Art des Trainings, z. B. Push, Pull, Legs. */
@@ -20,6 +22,8 @@ export interface WorkoutType {
   id: Id
   name: string
   createdAt: number
+  /** Letzte Änderung (für den Sync, wird automatisch gesetzt). */
+  updatedAt?: number
 }
 
 /** Was pro Satz gezählt wird. */
@@ -36,6 +40,8 @@ export interface ExerciseGroup {
   id: Id
   name: string
   createdAt: number
+  /** Letzte Änderung (für den Sync, wird automatisch gesetzt). */
+  updatedAt?: number
 }
 
 /** Eine konkrete Übung – das, was im Training geloggt wird. */
@@ -52,6 +58,8 @@ export interface Exercise {
   /** Wiederholungen oder Sekunden (Halteübungen). */
   measure: Measure
   createdAt: number
+  /** Letzte Änderung (für den Sync, wird automatisch gesetzt). */
+  updatedAt?: number
 }
 
 /** Eine Trainingseinheit. `endedAt` fehlt, solange sie läuft. */
@@ -61,6 +69,8 @@ export interface Workout {
   workoutTypeId: Id
   startedAt: number
   endedAt?: number
+  /** Letzte Änderung (für den Sync, wird automatisch gesetzt). */
+  updatedAt?: number
 }
 
 /**
@@ -75,6 +85,8 @@ export interface ExerciseEntry {
   position: number
   startedAt: number
   endedAt?: number
+  /** Letzte Änderung (für den Sync, wird automatisch gesetzt). */
+  updatedAt?: number
 }
 
 /**
@@ -95,6 +107,15 @@ export interface WorkoutSet {
   /** Haltedauer in Sekunden; null bei Wiederholungsübungen. */
   durationSec: number | null
   loggedAt: number
+  /** Letzte Änderung (für den Sync, wird automatisch gesetzt). */
+  updatedAt?: number
+}
+
+/** Markierung für eine gelöschte Zeile, damit der Sync das Löschen an den Server weitergibt. */
+export interface Tombstone {
+  id: Id
+  table: string
+  deletedAt: number
 }
 
 export const SCHEMA_VERSION = 2

@@ -1,4 +1,4 @@
-import { db, newId } from '../db/db'
+import { db, deleteRows, newId } from '../db/db'
 import { dependsOnLocation } from './equipment'
 import type { Equipment, Exercise, ExerciseEntry, Id, Measure, WorkoutSet } from '../db/schema'
 
@@ -82,7 +82,7 @@ export async function logSet(entry: ExerciseEntry, exercise: Exercise, values: S
 export async function undoLastSet(entryId: Id) {
   const sets = await db.sets.where('entryId').equals(entryId).sortBy('position')
   const last = sets.at(-1)
-  if (last) await db.sets.delete(last.id)
+  if (last) await deleteRows(db.sets, [last.id])
 }
 
 /**
@@ -90,9 +90,9 @@ export async function undoLastSet(entryId: Id) {
  * `atLastSet`: Ende = Zeitpunkt des letzten Satzes statt jetzt (für vergessene/abgebrochene Trainings).
  */
 export async function finishExercise(entryId: Id, atLastSet = false) {
-  await db.transaction('rw', db.entries, db.sets, async () => {
+  await db.transaction('rw', db.entries, db.sets, db.tombstones, async () => {
     const sets = await db.sets.where('entryId').equals(entryId).sortBy('loggedAt')
-    if (sets.length === 0) await db.entries.delete(entryId)
+    if (sets.length === 0) await deleteRows(db.entries, [entryId])
     else await db.entries.update(entryId, { endedAt: atLastSet ? sets.at(-1)!.loggedAt : Date.now() })
   })
 }
@@ -116,9 +116,9 @@ export async function finishWorkout(workoutId: Id, atLastActivity = false): Prom
   for (const e of open) await finishExercise(e.id, atLastActivity)
   const setCount = await db.sets.where('workoutId').equals(workoutId).count()
   if (setCount === 0) {
-    await db.transaction('rw', db.workouts, db.entries, async () => {
-      await db.entries.where('workoutId').equals(workoutId).delete()
-      await db.workouts.delete(workoutId)
+    await db.transaction('rw', db.workouts, db.entries, db.tombstones, async () => {
+      await deleteRows(db.entries, await db.entries.where('workoutId').equals(workoutId).primaryKeys())
+      await deleteRows(db.workouts, [workoutId])
     })
     return false
   }
@@ -163,10 +163,10 @@ export function recencyRank(lastUsed: Map<Id, number>) {
 
 /** Löscht ein Training samt Übungen und Sätzen. */
 export async function deleteWorkout(workoutId: Id) {
-  await db.transaction('rw', db.workouts, db.entries, db.sets, async () => {
-    await db.sets.where('workoutId').equals(workoutId).delete()
-    await db.entries.where('workoutId').equals(workoutId).delete()
-    await db.workouts.delete(workoutId)
+  await db.transaction('rw', db.workouts, db.entries, db.sets, db.tombstones, async () => {
+    await deleteRows(db.sets, await db.sets.where('workoutId').equals(workoutId).primaryKeys())
+    await deleteRows(db.entries, await db.entries.where('workoutId').equals(workoutId).primaryKeys())
+    await deleteRows(db.workouts, [workoutId])
   })
 }
 
@@ -234,10 +234,10 @@ export async function updateSet(setId: Id, values: Pick<WorkoutSet, 'weightKg' |
 
 /** Löscht einen Satz und nummeriert die übrigen Sätze der Übung neu durch. */
 export async function deleteSet(setId: Id) {
-  await db.transaction('rw', db.sets, async () => {
+  await db.transaction('rw', db.sets, db.tombstones, async () => {
     const set = await db.sets.get(setId)
     if (!set) return
-    await db.sets.delete(setId)
+    await deleteRows(db.sets, [setId])
     const rest = await db.sets.where('entryId').equals(set.entryId).sortBy('position')
     for (const [i, s] of rest.entries()) if (s.position !== i) await db.sets.update(s.id, { position: i })
   })
