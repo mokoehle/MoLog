@@ -1,4 +1,4 @@
--- MoLog – Datenbankschema für Supabase
+-- Datenbankschema für Supabase (Gym-Tracker)
 --
 -- Einmalig im Supabase-Dashboard ausführen: SQL Editor → New query → Inhalt einfügen → Run.
 --

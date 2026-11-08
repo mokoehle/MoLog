@@ -444,11 +444,6 @@ ul {
   background: var(--surface-2);
 }
 
-.list-card.variant {
-  margin-left: 20px;
-  width: calc(100% - 20px);
-}
-
 .list-card-top {
   display: flex;
   justify-content: space-between;
@@ -482,6 +477,12 @@ ul {
 
 .month {
   margin-top: 4px;
+}
+
+.search-input {
+  margin-bottom: 10px;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .filter-chips {
@@ -924,11 +925,20 @@ ul {
 }
 
 .sheet-body {
+  /* min-height: 0, sonst wächst der Inhalt über das Panel hinaus statt zu scrollen */
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding-bottom: 4px;
+}
+
+/* Inhalte nicht stauchen (die Satzliste würde sonst abgeschnitten), stattdessen scrollt .sheet-body */
+.sheet-body > * {
+  flex-shrink: 0;
 }
 
 .sheet-row {
@@ -1019,22 +1029,6 @@ ul {
 }
 
 /* ---------- Übungsgruppen ---------- */
-
-.group-row {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-  text-align: left;
-  padding: 12px 4px 2px;
-  font-size: 17px;
-}
-
-.group-row strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
 
 .choice-grid {
   display: flex;
