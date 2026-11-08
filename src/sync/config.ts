@@ -18,3 +18,11 @@ export const VAPID_PUBLIC_KEY: string =
   'BIdhkNFl4JzSBL9UZdD28nte0EeoFGa8U1rVjC1uTOuBcKqboMmcGirWVR1ibkceDdTgOn4XvkuLx9dBr9Kb1p8'
 
 export const pushConfigured = cloudConfigured && VAPID_PUBLIC_KEY !== ''
+
+/**
+ * Für die Datenschutzhinweise (Einstellungen → Datenschutz). Beides wird öffentlich angezeigt –
+ * also eine Adresse, die öffentlich sein darf. Leer = Abschnitt wird ohne die Angabe angezeigt.
+ */
+export const PRIVACY_CONTACT: string = ''
+/** Region des Supabase-Projekts, z. B. 'Frankfurt (EU)' – Project Settings → General */
+export const SUPABASE_REGION: string = 'Irland (EU)'

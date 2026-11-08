@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import { AccountSection } from '../components/AccountSection'
+import { PrivacyInfo } from '../components/PrivacyInfo'
 import { RestTimerSection } from '../components/RestTimerSection'
+import { Sheet } from '../components/Sheet'
 import { VersionInfo } from '../components/VersionInfo'
 import { downloadCsv, downloadExport, importAll } from '../logic/backup'
 import { ACCENTS, updateSettings, useSettings, type Theme } from '../settings'
@@ -19,6 +21,7 @@ export function Settings({ onClose }: Props) {
   const settings = useSettings()
   const fileRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [privacy, setPrivacy] = useState(false)
 
   const onImport = async (file: File) => {
     if (!confirm('Alle aktuellen Daten werden durch die Datei ersetzt. Fortfahren?')) return
@@ -93,6 +96,18 @@ export function Settings({ onClose }: Props) {
         />
       </div>
       {message && <p className="muted">{message}</p>}
+
+      <div className="settings-list privacy-link">
+        <button className="settings-row" onClick={() => setPrivacy(true)}>
+          Datenschutz ›
+        </button>
+      </div>
+
+      {privacy && (
+        <Sheet title="Datenschutz" onClose={() => setPrivacy(false)}>
+          <PrivacyInfo />
+        </Sheet>
+      )}
 
       <div className="spacer" />
       <VersionInfo />

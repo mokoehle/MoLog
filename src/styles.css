@@ -1025,6 +1025,28 @@ ul {
   }
 }
 
+/* ---------- Datenschutz ---------- */
+
+.privacy-link {
+  margin-top: 24px;
+}
+
+.privacy {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.privacy-section p + p {
+  margin-top: 8px;
+}
+
+.privacy a {
+  color: var(--accent);
+}
+
 .diag {
   font-size: 12px;
   line-height: 1.5;
