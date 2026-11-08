@@ -11,13 +11,20 @@ self.addEventListener('push', (event) => {
     data = { body: event.data ? event.data.text() : '' }
   }
   // iOS verlangt, dass jede Push-Nachricht sichtbar angezeigt wird.
+  // Vorher alte Pausen-Mitteilungen wegräumen, damit sich in der Mitteilungszentrale nichts stapelt.
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Pause vorbei', {
-      body: data.body || '',
-      tag: 'rest-timer',
-      renotify: true,
-      icon: 'icon-192.png',
-    }),
+    self.registration
+      .getNotifications({ tag: 'rest-timer' })
+      .then((old) => old.forEach((n) => n.close()))
+      .catch(() => {})
+      .then(() =>
+        self.registration.showNotification(data.title || 'Pause vorbei', {
+          body: data.body || '',
+          tag: 'rest-timer',
+          renotify: true,
+          icon: 'icon-192.png',
+        }),
+      ),
   )
 })
 

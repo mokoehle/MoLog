@@ -32,6 +32,8 @@ create index if not exists rest_timers_fire_at on public.rest_timers (fire_at);
 alter table public.push_subscriptions enable row level security;
 alter table public.rest_timers enable row level security;
 revoke all on public.push_subscriptions, public.rest_timers from anon, authenticated;
+-- Die Edge Function (service_role) liest/löscht hier – neue Tabellen bekommen in diesem Projekt keine automatischen Rechte
+grant select, insert, update, delete on public.rest_timers, public.push_subscriptions to service_role;
 
 -- ---------- Funktionen für die App (nur angemeldet, nur eigene Daten) ----------
 

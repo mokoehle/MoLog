@@ -20,8 +20,29 @@ const active = () => {
   return s.restTimer && pushConfigured && !!supabase
 }
 
+/**
+ * Entfernt bereits angezeigte Pausen-Mitteilungen aus der Mitteilungszentrale – sie sind nur im
+ * Moment selbst nützlich. Passiert beim Öffnen der App und beim nächsten Satz.
+ */
+export function clearRestNotifications() {
+  if (!('serviceWorker' in navigator)) return
+  void navigator.serviceWorker
+    .getRegistration()
+    .then((reg) => reg?.getNotifications({ tag: 'rest-timer' }))
+    .then((list) => list?.forEach((n) => n.close()))
+    .catch(() => {})
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') clearRestNotifications()
+  })
+  clearRestNotifications()
+}
+
 /** Startet die Pause nach einem Satz. Ersetzt eine laufende Pause. */
 export function startRest(message: string) {
+  clearRestNotifications()
   if (!active()) return
   const settings = getSettings()
   const seconds = settings.restAfterSet
