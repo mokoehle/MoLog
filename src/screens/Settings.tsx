@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { AccountSection } from '../components/AccountSection'
+import { RestTimerSection } from '../components/RestTimerSection'
 import { VersionInfo } from '../components/VersionInfo'
 import { downloadCsv, downloadExport, importAll } from '../logic/backup'
 import { ACCENTS, updateSettings, useSettings, type Theme } from '../settings'
@@ -39,6 +40,8 @@ export function Settings({ onClose }: Props) {
       </header>
 
       <AccountSection />
+
+      <RestTimerSection />
 
       <label className="field-label">Darstellung</label>
       <div className="segmented">

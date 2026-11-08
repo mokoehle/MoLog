@@ -15,6 +15,8 @@ export default defineConfig({
       // 'prompt': Update erst übernehmen, wenn kein Training läuft (siehe src/pwa.ts)
       registerType: 'prompt',
       includeAssets: ['apple-touch-icon.png', 'icon.svg'],
+      // Push-Nachrichten des Pausen-Timers (public/push-sw.js)
+      workbox: { importScripts: ['push-sw.js'] },
       manifest: {
         name: 'MoLog',
         short_name: 'MoLog',

@@ -1220,6 +1220,39 @@ p.danger {
   color: #e5484d;
 }
 
+/* ---------- Pausen-Timer ---------- */
+
+
+.settings-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: var(--text);
+}
+
+.toggle {
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  width: 22px;
+  height: 22px;
+}
+
+.settings-select {
+  flex-shrink: 0;
+  font: inherit;
+  color: var(--accent-ink);
+  background: none;
+  border: none;
+  text-align: right;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.settings-hint {
+  margin-top: 6px;
+}
+
 /* Eingabefelder im Konto-Kasten vom Kasten abheben */
 .account-box .text-input {
   background: var(--bg);

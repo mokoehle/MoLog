@@ -1,20 +1,15 @@
-import { useLiveQuery } from "dexie-react-hooks";
-import { Fragment, useEffect, useState } from "react";
-import { Autocomplete } from "../components/Autocomplete";
-import { HapticButton } from "../components/HapticButton";
-import { RulerSlider } from "../components/RulerSlider";
-import { SetEditor } from "../components/SetEditor";
-import { Sheet } from "../components/Sheet";
-import { db } from "../db/db";
-import { haptic } from "../haptics";
-import type { ExerciseEntry, Id, Workout } from "../db/schema";
-import {
-  describeSet,
-  fmtNum,
-  fmtRelative,
-  plural,
-  shortSet,
-} from "../logic/format";
+import { useLiveQuery } from 'dexie-react-hooks'
+import { Fragment, useEffect, useState } from 'react'
+import { Autocomplete } from '../components/Autocomplete'
+import { HapticButton } from '../components/HapticButton'
+import { RulerSlider } from '../components/RulerSlider'
+import { SetEditor } from '../components/SetEditor'
+import { Sheet } from '../components/Sheet'
+import { db } from '../db/db'
+import { haptic } from '../haptics'
+import { cancelRest, startRest } from '../restTimer'
+import type { ExerciseEntry, Id, Workout } from '../db/schema'
+import { describeSet, fmtNum, fmtRelative, plural, shortSet } from '../logic/format'
 import {
   changeEntryExercise,
   createExercise,
@@ -27,131 +22,110 @@ import {
   undoLastSet,
   updateExercise,
   type SetValues,
-} from "../logic/workout";
-import { ExerciseForm } from "./ExerciseForm";
+} from '../logic/workout'
+import { ExerciseForm } from './ExerciseForm'
 
 export interface WorkoutNav {
-  onOpenExercise: (id: Id) => void;
-  onOpenHistory: () => void;
-  onFinished: (saved: boolean) => void;
+  onOpenExercise: (id: Id) => void
+  onOpenHistory: () => void
+  onFinished: (saved: boolean) => void
 }
 
 interface Props extends WorkoutNav {
-  workout: Workout;
-  entry: ExerciseEntry;
+  workout: Workout
+  entry: ExerciseEntry
 }
 
-type Form = { mode: "new"; name: string } | { mode: "edit" };
+type Form = { mode: 'new'; name: string } | { mode: 'edit' }
 
-export function ExerciseScreen({
-  workout,
-  entry,
-  onOpenExercise,
-  onOpenHistory,
-  onFinished,
-}: Props) {
-  const [values, setValues] = useState<SetValues | null>(null);
-  const [sheet, setSheet] = useState<"menu" | "change" | "sets" | null>(null);
-  const [form, setForm] = useState<Form | null>(null);
-  const [editSetId, setEditSetId] = useState<string | null>(null);
+export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, onFinished }: Props) {
+  const [values, setValues] = useState<SetValues | null>(null)
+  const [sheet, setSheet] = useState<'menu' | 'change' | 'sets' | null>(null)
+  const [form, setForm] = useState<Form | null>(null)
+  const [editSetId, setEditSetId] = useState<string | null>(null)
   // Kurzes "✓ Gespeichert" als Bestätigung nach dem Speichern
-  const [savedAt, setSavedAt] = useState(0);
-  const justSaved = savedAt > 0;
+  const [savedAt, setSavedAt] = useState(0)
+  const justSaved = savedAt > 0
   useEffect(() => {
-    if (!savedAt) return;
-    const t = setTimeout(() => setSavedAt(0), 900);
-    return () => clearTimeout(t);
-  }, [savedAt]);
+    if (!savedAt) return
+    const t = setTimeout(() => setSavedAt(0), 900)
+    return () => clearTimeout(t)
+  }, [savedAt])
 
   const data = useLiveQuery(async () => {
     const [exercise, sets, exercises, previous] = await Promise.all([
       db.exercises.get(entry.exerciseId),
-      db.sets.where("entryId").equals(entry.id).sortBy("position"),
+      db.sets.where('entryId').equals(entry.id).sortBy('position'),
       db.exercises.toArray(),
       previousSessions(entry.exerciseId, workout.id, 3),
-    ]);
-    return { exercise, sets, exercises, previous };
-  }, [entry.id, entry.exerciseId]);
+    ])
+    return { exercise, sets, exercises, previous }
+  }, [entry.id, entry.exerciseId])
 
   // Startwerte: letzter Satz dieser Übung heute, sonst erster Satz vom letzten Mal.
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const sets = await db.sets
-        .where("entryId")
-        .equals(entry.id)
-        .sortBy("position");
-      const last = sets.at(-1);
-      const start = await getStartValues(entry.exerciseId, workout.id);
+    let cancelled = false
+    ;(async () => {
+      const sets = await db.sets.where('entryId').equals(entry.id).sortBy('position')
+      const last = sets.at(-1)
+      const start = await getStartValues(entry.exerciseId, workout.id)
       const v = last
         ? {
             weightKg: last.weightKg ?? start.weightKg,
             reps: last.reps ?? start.reps,
             durationSec: last.durationSec ?? start.durationSec,
           }
-        : start;
-      if (!cancelled) setValues(v);
-    })();
+        : start
+      if (!cancelled) setValues(v)
+    })()
     return () => {
-      cancelled = true;
-    };
-  }, [entry.id, entry.exerciseId, workout.id]);
+      cancelled = true
+    }
+  }, [entry.id, entry.exerciseId, workout.id])
 
-  if (!data?.exercise || !values) return null;
-  const { exercise, sets, exercises } = data;
-  const previous = data.previous.sessions;
-  const last = sets.at(-1);
-  const lastTime = previous[0];
+  if (!data?.exercise || !values) return null
+  const { exercise, sets, exercises } = data
+  const previous = data.previous.sessions
+  const last = sets.at(-1)
+  const lastTime = previous[0]
 
   const endWorkout = async () => {
-    setSheet(null);
-    onFinished(await finishWorkout(workout.id));
-  };
+    setSheet(null)
+    onFinished(await finishWorkout(workout.id))
+  }
 
   const discard = async () => {
-    const count = await db.sets.where("workoutId").equals(workout.id).count();
-    if (
-      count > 0 &&
-      !confirm(`Training mit ${count} Sätzen wirklich verwerfen?`)
-    )
-      return;
-    setSheet(null);
-    await deleteWorkout(workout.id);
-    onFinished(false);
-  };
+    const count = await db.sets.where('workoutId').equals(workout.id).count()
+    if (count > 0 && !confirm(`Training mit ${count} Sätzen wirklich verwerfen?`)) return
+    setSheet(null)
+    await deleteWorkout(workout.id)
+    onFinished(false)
+  }
 
   if (form) {
     return (
       <ExerciseForm
-        exercise={form.mode === "edit" ? exercise : undefined}
-        initialName={form.mode === "edit" ? exercise.name : form.name}
-        submitLabel={form.mode === "edit" ? "Speichern" : "Anlegen & wechseln"}
+        exercise={form.mode === 'edit' ? exercise : undefined}
+        initialName={form.mode === 'edit' ? exercise.name : form.name}
+        submitLabel={form.mode === 'edit' ? 'Speichern' : 'Anlegen & wechseln'}
         onCancel={() => setForm(null)}
         onSubmit={async (input) => {
-          if (form.mode === "edit") await updateExercise(exercise.id, input);
-          else await changeEntryExercise(entry.id, await createExercise(input));
-          setForm(null);
+          if (form.mode === 'edit') await updateExercise(exercise.id, input)
+          else await changeEntryExercise(entry.id, await createExercise(input))
+          setForm(null)
         }}
       />
-    );
+    )
   }
 
   return (
     <div className="screen exercise-screen">
       <header className="exercise-header">
-        <button
-          className="title-button"
-          onClick={() => setSheet("change")}
-          aria-label="Übung wechseln oder bearbeiten"
-        >
+        <button className="title-button" onClick={() => setSheet('change')} aria-label="Übung wechseln oder bearbeiten">
           <h1 className="exercise-title">{exercise.name}</h1>
           <span className="title-chevron">▾</span>
         </button>
-        <button
-          className="icon-button"
-          onClick={() => setSheet("menu")}
-          aria-label="Menü"
-        >
+        <button className="icon-button" onClick={() => setSheet('menu')} aria-label="Menü">
           <svg
             viewBox="0 0 24 24"
             width="26"
@@ -169,16 +143,13 @@ export function ExerciseScreen({
       {lastTime && (
         <p className="last-time">
           <span className="muted">
-            Letztes Mal (
-            {data.previous.otherLocation
-              ? "anderes Gym"
-              : fmtRelative(lastTime.entry.startedAt)}
+            Letztes Mal ({data.previous.otherLocation ? 'anderes Gym' : fmtRelative(lastTime.entry.startedAt)}
             ):
-          </span>{" "}
+          </span>{' '}
           {lastTime.sets.map((s, i) => (
             // Trennzeichen außerhalb von .nowrap, sonst kann die Zeile nirgends umbrechen
             <Fragment key={s.id}>
-              {i > 0 && " · "}
+              {i > 0 && ' · '}
               <span className="nowrap">{shortSet(s)}</span>
             </Fragment>
           ))}
@@ -189,19 +160,17 @@ export function ExerciseScreen({
         {/* Antippen zeigt alle Sätze dieser Übung */}
         <button
           key={sets.length}
-          className={
-            sets.length ? "set-info-button pulse-once" : "set-info-button"
-          }
+          className={sets.length ? 'set-info-button pulse-once' : 'set-info-button'}
           onClick={() => {
-            if (!sets.length) return;
-            setEditSetId(null);
-            setSheet("sets");
+            if (!sets.length) return
+            setEditSetId(null)
+            setSheet('sets')
           }}
         >
           Satz {sets.length + 1}
           {last && (
             <>
-              {" · zuletzt "}
+              {' · zuletzt '}
               {describeSet(last)} <span className="title-chevron">›</span>
             </>
           )}
@@ -210,7 +179,10 @@ export function ExerciseScreen({
         {last && (
           <button
             className="link-button undo"
-            onClick={() => undoLastSet(entry.id)}
+            onClick={() => {
+              cancelRest()
+              void undoLastSet(entry.id)
+            }}
           >
             Rückgängig
           </button>
@@ -230,7 +202,7 @@ export function ExerciseScreen({
             unit="kg"
           />
         )}
-        {exercise.measure === "reps" ? (
+        {exercise.measure === 'reps' ? (
           <RulerSlider
             value={values.reps}
             onChange={(reps) => setValues((v) => v && { ...v, reps })}
@@ -243,9 +215,7 @@ export function ExerciseScreen({
         ) : (
           <RulerSlider
             value={values.durationSec}
-            onChange={(durationSec) =>
-              setValues((v) => v && { ...v, durationSec })
-            }
+            onChange={(durationSec) => setValues((v) => v && { ...v, durationSec })}
             step={5}
             min={5}
             max={600}
@@ -257,30 +227,29 @@ export function ExerciseScreen({
 
       <div className="actions">
         <HapticButton
-          className={
-            justSaved ? "button button-primary saved" : "button button-primary"
-          }
+          className={justSaved ? 'button button-primary saved' : 'button button-primary'}
           onPress={() => {
-            haptic();
-            void logSet(entry, exercise, values);
-            setSavedAt(Date.now());
+            haptic()
+            void logSet(entry, exercise, values)
+            setSavedAt(Date.now())
+            startRest('set', `${exercise.name} · Satz ${sets.length + 2}`)
           }}
         >
-          {justSaved ? "✓ Gespeichert" : "Satz speichern"}
+          {justSaved ? '✓ Gespeichert' : 'Satz speichern'}
         </HapticButton>
         <button
           className="button button-secondary"
-          onClick={() => finishExercise(entry.id)}
+          onClick={() => {
+            if (sets.length) startRest('exercise', 'Weiter mit der nächsten Übung')
+            void finishExercise(entry.id)
+          }}
         >
           Nächste Übung
         </button>
       </div>
 
-      {sheet === "sets" && (
-        <Sheet
-          title={exercise.name}
-          onClose={() => (editSetId ? setEditSetId(null) : setSheet(null))}
-        >
+      {sheet === 'sets' && (
+        <Sheet title={exercise.name} onClose={() => (editSetId ? setEditSetId(null) : setSheet(null))}>
           {editSetId && sets.some((s) => s.id === editSetId) ? (
             <SetEditor
               set={sets.find((s) => s.id === editSetId)!}
@@ -291,18 +260,15 @@ export function ExerciseScreen({
           ) : (
             <>
               <p className="muted small">
-                {plural(sets.length, "Satz", "Sätze")}
-                {exercise.measure === "reps"
+                {plural(sets.length, 'Satz', 'Sätze')}
+                {exercise.measure === 'reps'
                   ? ` · ${fmtNum(sets.reduce((n, s) => n + (s.reps ?? 0), 0))} Wdh gesamt`
                   : ` · ${fmtNum(sets.reduce((n, s) => n + (s.durationSec ?? 0), 0))} s gesamt`}
               </p>
               <ol className="set-list">
                 {sets.map((s, i) => (
                   <li key={s.id}>
-                    <button
-                      className="set-row"
-                      onClick={() => setEditSetId(s.id)}
-                    >
+                    <button className="set-row" onClick={() => setEditSetId(s.id)}>
                       <span className="muted">Satz {i + 1}</span>
                       <strong>{shortSet(s)}</strong>
                     </button>
@@ -314,22 +280,19 @@ export function ExerciseScreen({
         </Sheet>
       )}
 
-      {sheet === "change" && (
+      {sheet === 'change' && (
         <Sheet title="Übung wechseln" onClose={() => setSheet(null)}>
           <button
             className="settings-row sheet-row"
             onClick={() => {
-              setSheet(null);
-              setForm({ mode: "edit" });
+              setSheet(null)
+              setForm({ mode: 'edit' })
             }}
           >
             „{exercise.name}“ bearbeiten (Name, Gruppe, Gerät, Schritte)
           </button>
           {sets.length > 0 && (
-            <p className="muted small">
-              Die {sets.length} gespeicherten Sätze werden in die neue Übung
-              übernommen.
-            </p>
+            <p className="muted small">Die {sets.length} gespeicherten Sätze werden in die neue Übung übernommen.</p>
           )}
           <Autocomplete
             label="Stattdessen"
@@ -338,29 +301,25 @@ export function ExerciseScreen({
             initialSuggestions={[]}
             autoFocus={false}
             onSelect={async (ex) => {
-              await changeEntryExercise(entry.id, ex);
-              setSheet(null);
+              await changeEntryExercise(entry.id, ex)
+              setSheet(null)
             }}
             onCreate={(name) => {
-              setSheet(null);
-              setForm({ mode: "new", name });
+              setSheet(null)
+              setForm({ mode: 'new', name })
             }}
           />
         </Sheet>
       )}
 
-      {sheet === "menu" && (
+      {sheet === 'menu' && (
         <Sheet title="Menü" onClose={() => setSheet(null)}>
           <h3 className="field-label">{exercise.name} – letzte Einheiten</h3>
-          {previous.length === 0 && (
-            <p className="muted small">Zum ersten Mal dabei.</p>
-          )}
+          {previous.length === 0 && <p className="muted small">Zum ersten Mal dabei.</p>}
           <ul className="card-list">
             {previous.map((p) => (
               <li key={p.entry.id} className="mini-session">
-                <span className="muted small">
-                  {fmtRelative(p.entry.startedAt)}
-                </span>
+                <span className="muted small">{fmtRelative(p.entry.startedAt)}</span>
                 <span className="set-chips">
                   {p.sets.map((s) => (
                     <span key={s.id} className="set-chip">
@@ -381,16 +340,16 @@ export function ExerciseScreen({
         </Sheet>
       )}
     </div>
-  );
+  )
 }
 
 /** Gemeinsame Menüpunkte während eines Trainings. */
 export function WorkoutMenuRows(props: {
-  exerciseName?: string;
-  onExercise?: () => void;
-  onHistory: () => void;
-  onEnd: () => void;
-  onCancel?: () => void;
+  exerciseName?: string
+  onExercise?: () => void
+  onHistory: () => void
+  onEnd: () => void
+  onCancel?: () => void
 }) {
   return (
     <div className="settings-list sheet-actions">
@@ -411,5 +370,5 @@ export function WorkoutMenuRows(props: {
         </button>
       )}
     </div>
-  );
+  )
 }

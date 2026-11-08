@@ -1,5 +1,6 @@
 import { db, deleteRows, newId } from '../db/db'
 import { dependsOnLocation } from './equipment'
+import { cancelRest } from '../restTimer'
 import type { Equipment, Exercise, ExerciseEntry, Id, Measure, WorkoutSet } from '../db/schema'
 
 export interface SetValues {
@@ -112,6 +113,7 @@ export async function lastActivity(workoutId: Id): Promise<number> {
  * `atLastActivity`: Ende = letzte Aktivität statt jetzt – sonst hätte ein vergessenes Training 14 h Dauer.
  */
 export async function finishWorkout(workoutId: Id, atLastActivity = false): Promise<boolean> {
+  cancelRest()
   const open = await db.entries.where('workoutId').equals(workoutId).filter((e) => !e.endedAt).toArray()
   for (const e of open) await finishExercise(e.id, atLastActivity)
   const setCount = await db.sets.where('workoutId').equals(workoutId).count()
@@ -163,6 +165,7 @@ export function recencyRank(lastUsed: Map<Id, number>) {
 
 /** Löscht ein Training samt Übungen und Sätzen. */
 export async function deleteWorkout(workoutId: Id) {
+  cancelRest()
   await db.transaction('rw', db.workouts, db.entries, db.sets, db.tombstones, async () => {
     await deleteRows(db.sets, await db.sets.where('workoutId').equals(workoutId).primaryKeys())
     await deleteRows(db.entries, await db.entries.where('workoutId').equals(workoutId).primaryKeys())
