@@ -2,7 +2,7 @@
 
 Minimalistischer Gym-Tracker als Progressive Web App fürs iPhone. Gebaut für ein Ziel: jeden Satz in Sekunden loggen und dann das Handy wieder weglegen.
 
-Keine Werbung, kein Abo, kein Account. Die App läuft offline, und alle Daten bleiben auf dem Gerät.
+Keine Werbung, kein Abo, kein Tracking. Die App läuft offline, und ohne Anmeldung bleiben alle Daten auf dem Gerät. Wer möchte, meldet sich an und synchronisiert in die Cloud.
 
 ## Funktionen
 
@@ -11,20 +11,27 @@ Keine Werbung, kein Abo, kein Account. Die App läuft offline, und alle Daten bl
 - **Passende Vorschläge:** Bei leerem Feld stehen die Übungen vom letzten Training derselben Art oben, in der damaligen Reihenfolge.
 - **Lineal-Slider** für Gewicht und Wiederholungen (bzw. Sekunden bei Halteübungen), angelehnt an den iOS-Timer: wischen, mit Schwung, und ein Tipp links oder rechts ändert den Wert um genau einen Schritt.
 - **Startwerte vom letzten Mal:** Der erste Satz übernimmt den ersten Satz der letzten Einheit, jeder weitere Satz den vorherigen. Meist reicht ein Tipp auf „Satz speichern“.
-- **„Letztes Mal: 80 kg × 8 · 80 kg × 8 · …“** steht direkt unter dem Übungsnamen.
+- **„Letztes Mal: vor 3 Tagen ›“** steht unter dem Übungsnamen. Ein Tipp darauf zeigt die Sätze der letzten Einheiten.
+- **Pausen-Timer (optional):** Nach jedem Satz kommt nach der eingestellten Pause eine iPhone-Mitteilung, auch bei geschlossener App. In der App selbst läuft bewusst kein Countdown. Bei „Nächste Übung“ wird die Pause abgebrochen.
 - **Nichts geht verloren:** Jeder Satz wird sofort gespeichert. Nach einem Absturz oder Neustart landet man wieder in der laufenden Übung.
-- **Flexibel:** Übung nachträglich wechseln oder bearbeiten, zur vorigen Übung zurückspringen, letzten Satz rückgängig machen. Verlauf und Statistiken lassen sich öffnen, ohne das Training zu unterbrechen.
+- **Flexibel:** Übung nachträglich wechseln oder bearbeiten, zur vorigen Übung zurückspringen, letzten Satz rückgängig machen, frühere Sätze korrigieren oder löschen. Verlauf und Statistiken lassen sich öffnen, ohne das Training zu unterbrechen.
 
 ### Übungen
 - **Gruppen:** z. B. *Rudern* mit *T-Bar-Rudern*, *Kabelrudern eng* und *Kurzhantelrudern*. Geloggt wird immer die konkrete Übung, ausgewertet werden kann auch die ganze Gruppe.
 - **Geräte-Typ** (Langhantel, Kurzhantel, Kabel, Maschine, Körpergewicht) mit passender **Schrittweite** für den Slider, z. B. 1 kg bei Kurzhanteln. Die Schrittweite lässt sich pro Übung anpassen.
 - **Wiederholungen oder Sekunden**, mit Gewicht, Zusatzgewicht oder ohne.
+- **Gym-abhängig:** Bei Maschinen und Kabelzügen beziehen sich Startwerte und Vergleiche auf dasselbe Gym, denn eine andere Maschine heißt andere Gewichte.
 
 ### Auswertung
 - **Zusammenfassung nach dem Training:** alle Übungen in der gemachten Reihenfolge, mit Dauer, Sätzen, Volumen und Vergleich zum letzten Mal, inklusive Bestwerten.
-- **Verlauf:** Trainings nach Monat, filterbar nach Trainingsart. Übungen nach Gruppen, sortierbar.
+- **Verlauf:** Trainings nach Monat, filterbar nach Trainingsart. Übungen nach Gruppen, sortierbar und durchsuchbar.
 - **Übungs-Details:** Bestwert, geschätztes 1RM, Ø Dauer pro Einheit und ein Verlaufsdiagramm.
 - **Export** als CSV (eine Zeile pro Satz, z. B. zum Auswerten mit einer KI) oder als JSON-Backup.
+
+### Konto & Sync (optional)
+- **Anmeldung per E-Mail-Code**, ohne Passwort.
+- **Automatischer Sync:** Die App bleibt offline-first. Änderungen werden im Hintergrund abgeglichen, sobald Netz da ist, und vorhandene lokale Daten werden bei der ersten Anmeldung übernommen.
+- **Datenschutz:** Jeder sieht nur seine eigenen Daten (Row Level Security). Die Datenschutzhinweise stehen in den Einstellungen.
 
 ### Darstellung
 Hell, Dunkel oder wie das System, dazu sechs Akzentfarben.
@@ -37,6 +44,7 @@ Hell, Dunkel oder wie das System, dazu sechs Akzentfarben.
 | Build | Vite |
 | Daten | IndexedDB über [Dexie](https://dexie.org), offline-first |
 | PWA | vite-plugin-pwa (Service Worker, Manifest, Updates) |
+| Cloud | [Supabase](https://supabase.com): Postgres mit RLS, Login per E-Mail-Code, Edge Function + pg_cron für Web Push |
 | Hosting | GitHub Pages über GitHub Actions |
 
 ## Entwicklung
@@ -61,7 +69,23 @@ Der Dev-Server ist auch im lokalen Netzwerk erreichbar. Auf dem iPhone (gleiches
 2. Auf `main` pushen. Der Workflow baut die App und deployt sie automatisch.
 3. `https://<github-user>.github.io/MoLog/` in **Safari** öffnen → Teilen → **Zum Home-Bildschirm**.
 
+Push-Mitteilungen gibt es auf dem iPhone nur in der Home-Bildschirm-App (ab iOS 16.4), nicht im normalen Safari-Tab.
+
 **Updates:** Die App holt sich neue Versionen selbst. Beim Öffnen wird ein Update sofort übernommen. Ist die App schon offen, wartet das Update, bis kein Training mehr läuft. Welche Version installiert ist, steht unten in den Einstellungen.
+
+## Eigenes Supabase-Projekt (optional)
+
+Ohne Supabase läuft die App rein lokal. Sind in [`src/sync/config.ts`](src/sync/config.ts) URL und Key eingetragen, erscheinen Anmeldung und Sync.
+
+1. Projekt anlegen und [`supabase/schema.sql`](supabase/schema.sql) im SQL-Editor ausführen.
+2. **Authentication:** Login per E-Mail aktivieren. In den Mail-Vorlagen „Magic link“ und „Confirm signup“ `{{ .Token }}` statt des Links einfügen, damit ein Code ankommt. Die Site URL auf die GitHub-Pages-Adresse setzen.
+3. Project URL und **publishable** Key in `src/sync/config.ts` eintragen. Beide sind öffentlich gedacht, den Secret Key niemals.
+
+**Pausen-Timer (Web Push):**
+
+1. VAPID-Schlüssel erzeugen: `npx web-push generate-vapid-keys`. Den öffentlichen Schlüssel in `src/sync/config.ts` und in `supabase/functions/rest-push/index.ts` (`APP_PUBLIC_KEY`) eintragen.
+2. Die Edge Function `rest-push` mit „Verify JWT“ aus deployen und die Secrets `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` und `VAPID_SUBJECT` (`mailto:…`) setzen.
+3. [`supabase/rest-timer.sql`](supabase/rest-timer.sql) ausführen, vorher die Projekt-URL im Cron-Job anpassen. Ein pg_cron-Job prüft dann alle 5 Sekunden, ob eine Pause abgelaufen ist, und ruft dafür die Function auf.
 
 ## Projektstruktur
 
@@ -71,9 +95,13 @@ src/
 ├── logic/         Logik ohne UI: Training, Auswertung, Suche, Export, Formatierung
 ├── components/    Wiederverwendbare Bausteine (Slider, Autocomplete, Diagramm, Sheet …)
 ├── screens/       Die einzelnen Bildschirme
+├── sync/          Supabase-Zugang, Login und Sync
 ├── App.tsx        Navigation
 ├── pwa.ts         Service Worker & Update-Logik
+├── restTimer.ts   Pausen-Timer (Push-Anmeldung, Start/Abbruch)
 └── styles.css     Gesamtes Styling inkl. Hell/Dunkel
+public/push-sw.js  Zeigt Push-Mitteilungen an (Teil des Service Workers)
+supabase/          Datenbankschema, Pausen-Timer-SQL und Edge Function
 ```
 
 Logik und Oberfläche sind bewusst getrennt. So lässt sich die App später in eine native Hülle (Capacitor) packen oder in SwiftUI nachbauen, ohne Daten oder Logik neu zu erfinden.
@@ -92,16 +120,19 @@ Vollständig dokumentiert in [`src/db/schema.ts`](src/db/schema.ts). Alle Zeitst
 | `entries` | Eine Übung innerhalb eines Trainings, mit Reihenfolge, Start und Ende (→ Übungsdauer) |
 | `sets` | Einzelne Sätze mit Gewicht, Wiederholungen bzw. Sekunden |
 
+Dazu kommen `tombstones` (gelöschte Einträge, damit Löschungen synchronisiert werden) und `syncMeta`. In Supabase heißen die Tabellen gleich, nur in snake_case.
+
 Änderungen am Datenmodell laufen über Dexie-Versionen mit Migration in [`src/db/db.ts`](src/db/db.ts), damit vorhandene Daten erhalten bleiben.
 
 ## Bekannte iOS-Eigenheiten
 
 - **Höhe in Home-Bildschirm-Apps:** iOS 26 macht installierte Web-Apps mit transparenter Statusleiste um die Höhe der Statusleiste zu kurz (WebKit-Bug 301108), unten entsteht eine Lücke. Gelöst über die CSS-Variable `--app-h`, Details als Kommentar in `styles.css`.
-- **Tastatur:** Sie verdeckt das Layout, statt es zu verkleinern. Eingabe-Screens richten sich deshalb nach dem sichtbaren Bereich (`src/visualViewport.ts`).
+- **Tastatur:** Sie verdeckt das Layout, statt es zu verkleinern. Eingabe-Screens richten sich deshalb nach dem sichtbaren Bereich (`src/visualViewport.ts`). iOS meldet diesen nicht immer zuverlässig, deshalb wird zusätzlich bei Fokus, Eingabe und Rückkehr in die App nachgemessen.
+- **Mitteilungen:** Web-Apps können keine Mitteilung für später einplanen. Den Zeitpunkt merkt sich deshalb der Server, der dann per Web Push schickt.
 - **Vibration:** Safari unterstützt keine Vibrations-Schnittstelle (`navigator.vibrate`). Für echte Haptik beim Slider bräuchte es eine native Hülle.
 
 ## Ausblick
 
-- Cloud-Sync mit Login, damit die Daten nicht nur auf dem Gerät liegen
+- Überarbeitetes Design
 - Weitere Auswertungen (Volumen pro Woche, Muskelgruppen)
 - Optional: native Hülle über Capacitor für Haptik und Apple Health (z. B. Herzfrequenz von der Uhr)
