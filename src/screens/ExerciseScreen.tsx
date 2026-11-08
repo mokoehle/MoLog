@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Fragment, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Autocomplete } from '../components/Autocomplete'
 import { HapticButton } from '../components/HapticButton'
 import { RulerSlider } from '../components/RulerSlider'
@@ -40,7 +40,7 @@ type Form = { mode: 'new'; name: string } | { mode: 'edit' }
 
 export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, onFinished }: Props) {
   const [values, setValues] = useState<SetValues | null>(null)
-  const [sheet, setSheet] = useState<'menu' | 'change' | 'sets' | null>(null)
+  const [sheet, setSheet] = useState<'menu' | 'change' | 'sets' | 'last' | null>(null)
   const [form, setForm] = useState<Form | null>(null)
   const [editSetId, setEditSetId] = useState<string | null>(null)
   // Kurzes "✓ Gespeichert" als Bestätigung nach dem Speichern
@@ -102,6 +102,23 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
     onFinished(false)
   }
 
+  const previousList = (
+    <ul className="card-list">
+      {previous.map((p) => (
+        <li key={p.entry.id} className="mini-session">
+          <span className="muted small">{fmtRelative(p.entry.startedAt)}</span>
+          <span className="set-chips">
+            {p.sets.map((s) => (
+              <span key={s.id} className="set-chip">
+                {shortSet(s)}
+              </span>
+            ))}
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+
   if (form) {
     return (
       <ExerciseForm
@@ -141,19 +158,11 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
       </header>
 
       {lastTime && (
-        <p className="last-time">
-          <span className="muted">
-            Letztes Mal ({data.previous.otherLocation ? 'anderes Gym' : fmtRelative(lastTime.entry.startedAt)}
-            ):
-          </span>{' '}
-          {lastTime.sets.map((s, i) => (
-            // Trennzeichen außerhalb von .nowrap, sonst kann die Zeile nirgends umbrechen
-            <Fragment key={s.id}>
-              {i > 0 && ' · '}
-              <span className="nowrap">{shortSet(s)}</span>
-            </Fragment>
-          ))}
-        </p>
+        // Nur ein Hinweis – die Sätze vom letzten Mal gibt es per Antippen
+        <button className="last-time" onClick={() => setSheet('last')}>
+          Letztes Mal: {data.previous.otherLocation ? 'anderes Gym' : fmtRelative(lastTime.entry.startedAt)}{' '}
+          <span className="title-chevron">›</span>
+        </button>
       )}
 
       <div className="set-info">
@@ -280,6 +289,12 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
         </Sheet>
       )}
 
+      {sheet === 'last' && (
+        <Sheet title="Letzte Einheiten" onClose={() => setSheet(null)}>
+          {previousList}
+        </Sheet>
+      )}
+
       {sheet === 'change' && (
         <Sheet title="Übung wechseln" onClose={() => setSheet(null)}>
           <button
@@ -316,20 +331,7 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
         <Sheet title="Menü" onClose={() => setSheet(null)}>
           <h3 className="field-label">{exercise.name} – letzte Einheiten</h3>
           {previous.length === 0 && <p className="muted small">Zum ersten Mal dabei.</p>}
-          <ul className="card-list">
-            {previous.map((p) => (
-              <li key={p.entry.id} className="mini-session">
-                <span className="muted small">{fmtRelative(p.entry.startedAt)}</span>
-                <span className="set-chips">
-                  {p.sets.map((s) => (
-                    <span key={s.id} className="set-chip">
-                      {shortSet(s)}
-                    </span>
-                  ))}
-                </span>
-              </li>
-            ))}
-          </ul>
+          {previousList}
           <WorkoutMenuRows
             onExercise={() => onOpenExercise(exercise.id)}
             exerciseName={exercise.name}
