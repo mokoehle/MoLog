@@ -26,8 +26,15 @@ Deno.serve(async () => {
   if (error) return new Response(error.message, { status: 500 })
 
   let sent = 0
+  // Gründe für Fehlschläge – landen in der Antwort (in Supabase sichtbar über net._http_response)
+  const errors: string[] = []
   for (const timer of due ?? []) {
-    const { data: subs } = await db.from('push_subscriptions').select('*').eq('user_id', timer.user_id)
+    const { data: subs, error: subsError } = await db
+      .from('push_subscriptions')
+      .select('*')
+      .eq('user_id', timer.user_id)
+    if (subsError) errors.push(`Geräte lesen: ${subsError.message}`)
+    else if (!subs.length) errors.push('Keine Geräte für diesen Nutzer')
     await Promise.all(
       (subs ?? []).map(async (s) => {
         try {
@@ -38,13 +45,16 @@ Deno.serve(async () => {
           )
           sent++
         } catch (e) {
-          const status = (e as { statusCode?: number }).statusCode
+          const { statusCode, body } = e as { statusCode?: number; body?: string }
+          const reason = `${statusCode ?? '-'} ${body || (e as Error).message}`.trim()
+          errors.push(reason)
+          console.error('Push fehlgeschlagen', reason)
           // Gerät hat sich abgemeldet (App gelöscht, Erlaubnis entzogen) → Eintrag entfernen
-          if (status === 404 || status === 410) await db.from('push_subscriptions').delete().eq('endpoint', s.endpoint)
-          else console.error('Push fehlgeschlagen', status, (e as Error).message)
+          if (statusCode === 404 || statusCode === 410)
+            await db.from('push_subscriptions').delete().eq('endpoint', s.endpoint)
         }
       }),
     )
   }
-  return Response.json({ due: due?.length ?? 0, sent })
+  return Response.json({ due: due?.length ?? 0, sent, errors })
 })
