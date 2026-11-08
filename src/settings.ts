@@ -23,12 +23,10 @@ export const ACCENTS: Accent[] = [
 export interface Settings {
   theme: Theme
   accent: string
-  /** Pausen-Timer: Mitteilung, wenn die Pause nach einem Satz bzw. einer Übung vorbei ist. */
+  /** Pausen-Timer: Mitteilung, wenn die Pause nach einem Satz vorbei ist. */
   restTimer: boolean
   /** Pause nach einem Satz, in Sekunden. */
   restAfterSet: number
-  /** Pause nach einer Übung (bis zur nächsten), in Sekunden. */
-  restAfterExercise: number
 }
 
 const KEY = 'molog-settings'
@@ -37,7 +35,6 @@ const DEFAULTS: Settings = {
   accent: 'lime',
   restTimer: false,
   restAfterSet: 120,
-  restAfterExercise: 180,
 }
 
 // Einstellungen sind Vorlieben pro Gerät, daher localStorage statt Datenbank.

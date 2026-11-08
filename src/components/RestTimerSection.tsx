@@ -4,9 +4,9 @@ import { updateSettings, useSettings } from '../settings'
 import { pushConfigured } from '../sync/config'
 import { useSyncStatus } from '../sync/sync'
 
-// 0:30 bis 5:00 in 15-s-Schritten, danach größere Sprünge
-const DURATIONS = [...Array.from({ length: 19 }, (_, i) => 30 + i * 15), 360, 420, 480, 600]
-const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} min`
+// 10 s (zum Testen), dann 0:30 bis 5:00 in 15-s-Schritten, danach größere Sprünge
+const DURATIONS = [10, ...Array.from({ length: 19 }, (_, i) => 30 + i * 15), 360, 420, 480, 600]
+const fmt = (s: number) => (s < 60 ? `${s} s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} min`)
 
 /** Einstellungen → Pausen-Timer: an/aus (= Mitteilungen erlauben) und Pausenzeiten. */
 export function RestTimerSection() {
@@ -30,13 +30,13 @@ export function RestTimerSection() {
     }
   }
 
-  const durationRow = (label: string, key: 'restAfterSet' | 'restAfterExercise') => (
+  const durationRow = (
     <label className="settings-row settings-toggle">
-      <span>{label}</span>
+      <span>Pause nach einem Satz</span>
       <select
         className="settings-select"
-        value={settings[key]}
-        onChange={(e) => updateSettings({ [key]: Number(e.target.value) })}
+        value={settings.restAfterSet}
+        onChange={(e) => updateSettings({ restAfterSet: Number(e.target.value) })}
       >
         {DURATIONS.map((s) => (
           <option key={s} value={s}>
@@ -69,12 +69,7 @@ export function RestTimerSection() {
             onChange={(e) => void toggle(e.target.checked)}
           />
         </label>
-        {settings.restTimer && (
-          <>
-            {durationRow('Nach einem Satz', 'restAfterSet')}
-            {durationRow('Nach einer Übung', 'restAfterExercise')}
-          </>
-        )}
+        {settings.restTimer && durationRow}
       </div>
       <p className="muted small settings-hint">{hint}</p>
       {message && <p className="danger small">{message}</p>}

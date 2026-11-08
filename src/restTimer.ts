@@ -3,7 +3,7 @@ import { pushConfigured, VAPID_PUBLIC_KEY } from './sync/config'
 import { supabase } from './sync/sync'
 
 /**
- * Pausen-Timer: Nach „Satz speichern“ bzw. „Nächste Übung“ kommt nach der eingestellten Zeit
+ * Pausen-Timer: Nach „Satz speichern“ kommt nach der eingestellten Zeit
  * eine iPhone-Mitteilung – auch bei geschlossener App / gesperrtem Handy. In der App selbst wird
  * bewusst nichts angezeigt.
  *
@@ -20,11 +20,11 @@ const active = () => {
   return s.restTimer && pushConfigured && !!supabase
 }
 
-/** Startet die Pause nach einem Satz (`set`) oder nach einer Übung (`exercise`). Ersetzt eine laufende Pause. */
-export function startRest(kind: 'set' | 'exercise', message: string) {
+/** Startet die Pause nach einem Satz. Ersetzt eine laufende Pause. */
+export function startRest(message: string) {
   if (!active()) return
   const settings = getSettings()
-  const seconds = kind === 'set' ? settings.restAfterSet : settings.restAfterExercise
+  const seconds = settings.restAfterSet
   runningUntil = Date.now() + seconds * 1000
   // Ohne Netz klappt das nicht – dann kommt eben keine Mitteilung, gespeichert wird trotzdem alles.
   void supabase!
@@ -32,7 +32,7 @@ export function startRest(kind: 'set' | 'exercise', message: string) {
     .then(({ error }) => error && console.warn('Pausen-Timer:', error.message))
 }
 
-/** Bricht eine laufende Pause ab (Satz rückgängig, Training beendet) – dann kommt keine Mitteilung. */
+/** Bricht eine laufende Pause ab (Nächste Übung, Satz rückgängig, Training beendet) – dann kommt keine Mitteilung. */
 export function cancelRest() {
   if (!active() || runningUntil < Date.now()) return
   runningUntil = 0

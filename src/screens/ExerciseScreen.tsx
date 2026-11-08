@@ -232,7 +232,7 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
             haptic()
             void logSet(entry, exercise, values)
             setSavedAt(Date.now())
-            startRest('set', `${exercise.name} · Satz ${sets.length + 2}`)
+            startRest(`${exercise.name} · Satz ${sets.length + 2}`)
           }}
         >
           {justSaved ? '✓ Gespeichert' : 'Satz speichern'}
@@ -240,7 +240,7 @@ export function ExerciseScreen({ workout, entry, onOpenExercise, onOpenHistory, 
         <button
           className="button button-secondary"
           onClick={() => {
-            if (sets.length) startRest('exercise', 'Weiter mit der nächsten Übung')
+            cancelRest()
             void finishExercise(entry.id)
           }}
         >
