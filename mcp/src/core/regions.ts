@@ -9,7 +9,7 @@ export type Region = 'legs' | 'push' | 'pull' | 'core' | 'other'
 const RULES: [Region, RegExp][] = [
   [
     'core',
-    /beinheben|knieheben|leg ?raise|knee ?raise|plank|unterarmstuetz|crunch|sit.?up|bauch|\bcore\b|hollow|l.?sit|dragon ?flag|russian ?twist|ab.?roll|pallof|seitstuetz/,
+    /beinheben|knieheben|leg ?raise|knee ?raise|plank|unterarmstuetz|crunch|sit.?up|bauch|\bcore\b|hollow|l.?sit|dragon ?flag|russian ?twist|ab.?roll|\babs?\b|pallof|seitstuetz|front ?lever|\bfl\b|v.?up/,
   ],
   [
     'legs',
@@ -17,11 +17,11 @@ const RULES: [Region, RegExp][] = [
   ],
   [
     'pull',
-    /rudern|row|klimmz|pull|chin|\blat|latzug|curl|bizeps|bicep|face ?pull|shrug|reverse ?fly|hyperext|rueckenstreck|back ?ext/,
+    /ruder|row|klimmz|pull|\bchin|\blat\b|latzug|lat ?pull|lats\b|curl|bizeps|bicep|face ?pull|shrug|reverse ?fly|hyper ?ext|rueckenstreck|back ?ext/,
   ],
   [
     'push',
-    /bank|bench|druecken|press|dip|liegestuetz|push|fly|butterfly|flys|seitheben|lateral|frontheben|trizeps|tricep|french|skull|handstand|schulter|shoulder|overhead|muscle.?up/,
+    /bank|bench|druecken|press|dip|liegestuetz|push|fly|butterfly|flys|seitheben|\blateral|frontheben|trizeps|tricep|french|skull|handstand|schulter|shoulder|overhead|muscle.?up/,
   ],
 ]
 
@@ -32,6 +32,7 @@ const normalize = (s: string) =>
     .replace(/ö/g, 'oe')
     .replace(/ü/g, 'ue')
     .replace(/ß/g, 'ss')
+    .replace(/[-_()]/g, ' ')
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
 
