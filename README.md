@@ -45,6 +45,7 @@ Hell, Dunkel oder wie das System, dazu sechs Akzentfarben.
 | Daten | IndexedDB über [Dexie](https://dexie.org), offline-first |
 | PWA | vite-plugin-pwa (Service Worker, Manifest, Updates) |
 | Cloud | [Supabase](https://supabase.com): Postgres mit RLS, Login per E-Mail-Code, Edge Function + pg_cron für Web Push |
+| KI-Schnittstelle | MCP-Server (`@modelcontextprotocol/sdk`), läuft direkt mit Node |
 | Hosting | GitHub Pages über GitHub Actions |
 
 ## Entwicklung
@@ -87,6 +88,83 @@ Ohne Supabase läuft die App rein lokal. Sind in [`src/sync/config.ts`](src/sync
 2. Die Edge Function `rest-push` mit „Verify JWT“ aus deployen und die Secrets `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` und `VAPID_SUBJECT` (`mailto:…`) setzen.
 3. [`supabase/rest-timer.sql`](supabase/rest-timer.sql) ausführen, vorher die Projekt-URL im Cron-Job anpassen. Ein pg_cron-Job prüft dann alle 5 Sekunden, ob eine Pause abgelaufen ist, und ruft dafür die Function auf.
 
+## Coach-Schnittstelle (MCP-Server)
+
+Unter [`mcp/`](mcp/) liegt ein [MCP-Server](https://modelcontextprotocol.io), über den ein KI-Assistent wie Claude die eigenen Krafttrainingsdaten lesen kann, zum Beispiel als Sportcoach zusammen mit Garmin-Daten. Der Server liest nur und meldet sich mit dem normalen App-Konto an. Jeder sieht also nur seine eigenen Daten, auch wenn Freunde den Server mit ihrem Konto nutzen.
+
+**Einrichten** (Node ≥ 22.18, Cloud-Sync muss in der App aktiv sein):
+
+```bash
+cd mcp
+npm install
+npm run login        # E-Mail-Adresse des App-Kontos + Code aus der Mail
+```
+
+Die Sitzung liegt danach in `~/.config/molog-coach/` und nicht im Repo. Mit `npm run login -- --logout` wird sie wieder gelöscht. Anschließend den Server bei Claude Code eintragen:
+
+```bash
+claude mcp add --scope user molog-coach -- node /pfad/zu/MoLog/mcp/src/stdio.ts
+```
+
+Bei Claude Desktop kommt derselbe Befehl (`node` + Pfad zu `mcp/src/stdio.ts`) in die `claude_desktop_config.json`.
+
+**Tools:**
+
+| Tool | Liefert |
+| --- | --- |
+| `listStrengthWorkouts` | Trainings im Zeitraum mit Start/Ende, allen Sätzen, Top-Satz, e1RM, Summen und Beinbelastung (`legs.load`: none / light / heavy ab 6 Beinsätzen) |
+| `getStrengthWorkout` | Ein Training mit jedem Satz inkl. Uhrzeit und Pause davor, per `id` oder per Zeitpunkt `at`, z. B. der Startzeit einer Garmin-Aktivität |
+| `getExerciseProgress` | Verlauf einer Übung oder Gruppe: Top-Satz, e1RM (Epley), Tonnage je Einheit, Trend und Bestwert |
+| `getWeeklyStrengthVolume` | Sätze, Wdh und Tonnage je ISO-Woche, gruppiert nach Region, Übung oder Gruppe |
+| `listExercises` | Alle Übungen mit Gruppe, Region, Gerät, Anzahl Einheiten und letztem Datum |
+
+Zeiten werden als lokale Zeit mit Offset ausgegeben, wie Garmins `startTimeLocal`. Darüber lassen sich Training und Garmin-Aktivität zuordnen. Die App speichert keine RPE, Notizen oder Muskelgruppen. Die Region (`legs`, `push`, `pull`, `core`, `other`) wird deshalb aus dem Übungsnamen geschätzt.
+
+**Beispiel** (`npm run demo` zeigt alle Tools mit erfundenen Daten, ohne Anmeldung):
+
+```jsonc
+// getStrengthWorkout {"at": "2026-11-05T17:52:00+01:00"}  (gekürzt)
+{
+  "matchOffsetMin": -7,
+  "start": "2026-11-05T17:45:00+01:00",
+  "end": "2026-11-05T18:26:41+01:00",
+  "durationMin": 42,
+  "type": "Beine",
+  "totals": { "exercises": 4, "sets": 12, "reps": 90, "tonnageKg": 4800 },
+  "legs": { "load": "heavy", "sets": 10, "typeSuggestsLegDay": true, "lastLegSetAt": "2026-11-05T18:18:04+01:00" },
+  "exercises": [
+    {
+      "name": "Kniebeuge", "region": "legs", "equipment": "barbell",
+      "sets": [
+        { "kg": 100, "reps": 6, "at": "2026-11-05T17:49:30+01:00", "e1rmKg": 120 },
+        { "kg": 100, "reps": 6, "at": "2026-11-05T17:52:37+01:00", "restSec": 187, "e1rmKg": 120 }
+      ]
+    }
+  ]
+}
+
+// getExerciseProgress {"exercise": "kniebeuge"}  (gekürzt)
+{
+  "exercise": { "name": "Kniebeuge", "region": "legs", "equipment": "barbell" },
+  "sessions": 3,
+  "e1rmTrend": { "first": { "date": "2026-10-22", "kg": 108 }, "last": { "date": "2026-11-05", "kg": 120 }, "changeKg": 12 },
+  "history": [{ "date": "2026-11-05", "sets": 4, "top": "100kg×6", "e1rmKg": 120, "reps": 24, "tonnageKg": 2400 }]
+}
+
+// getWeeklyStrengthVolume {"by": "region"}  (eine Woche)
+{
+  "week": "2026-W45", "weekStart": "2026-11-02", "workouts": 3,
+  "region": {
+    "legs": { "sets": 10, "reps": 90, "tonnageKg": 4800 },
+    "pull": { "sets": 10, "reps": 98, "tonnageKg": 3970 },
+    "push": { "sets": 9, "reps": 84, "tonnageKg": 2610 },
+    "core": { "sets": 2, "seconds": 160 }
+  }
+}
+```
+
+**Aufbau:** Die Auswertung ([`mcp/src/core/`](mcp/src/core/)) kennt weder Netz noch Transport. Sie bekommt nur eine Datenquelle. `src/stdio.ts` verbindet sie mit Supabase und stdio. Ein späterer HTTP-Betrieb, etwa auf einem eigenen Server und mit Login je Benutzer, braucht nur einen weiteren Einstiegspunkt mit anderem Transport. Datentypen und Tabellen-Mapping kommen direkt aus der App (`src/db/schema.ts`, `src/sync/mapping.ts`), damit nichts auseinanderläuft. Node führt den TypeScript-Code direkt aus, es gibt keinen Build-Schritt. `npm run check` prüft die Typen.
+
 ## Projektstruktur
 
 ```
@@ -102,6 +180,7 @@ src/
 └── styles.css     Gesamtes Styling inkl. Hell/Dunkel
 public/push-sw.js  Zeigt Push-Mitteilungen an (Teil des Service Workers)
 supabase/          Datenbankschema, Pausen-Timer-SQL und Edge Function
+mcp/               MCP-Server für KI-Coaches (liest die eigenen Trainingsdaten)
 ```
 
 Logik und Oberfläche sind bewusst getrennt. So lässt sich die App später in eine native Hülle (Capacitor) packen oder in SwiftUI nachbauen, ohne Daten oder Logik neu zu erfinden.
@@ -134,5 +213,7 @@ Dazu kommen `tombstones` (gelöschte Einträge, damit Löschungen synchronisiert
 ## Ausblick
 
 - Überarbeitetes Design
-- Weitere Auswertungen (Volumen pro Woche, Muskelgruppen)
+- Muskelgruppen pro Übung (ersetzen dann die Namens-Schätzung im MCP-Server)
+- MCP-Server per HTTP auf einem eigenen Server, damit er auch vom Handy aus nutzbar ist
+- Weitere Auswertungen in der App (Volumen pro Woche)
 - Optional: native Hülle über Capacitor für Haptik und Apple Health (z. B. Herzfrequenz von der Uhr)

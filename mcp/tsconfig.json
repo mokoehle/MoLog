@@ -1,0 +1,21 @@
+{
+  // Nur Typprüfung (npm run check). Ausgeführt wird der TypeScript-Code direkt von Node (Type Stripping),
+  // deshalb: keine Enums/Namespaces und relative Imports mit .ts-Endung.
+  // DOM nur, weil die geteilten Typen aus der App (src/sync/mapping.ts → src/db/db.ts) mitgeprüft werden.
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["src"]
+}
